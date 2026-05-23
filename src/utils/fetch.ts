@@ -45,6 +45,7 @@ export async function providerFetch<T>({
       const errorText = await response.text().catch(() => "");
       throw new EndpointNotAvailableError(
         `${provider} API error (${response.status}): ${errorText || response.statusText}`,
+        response.status,
       );
     }
 
@@ -74,7 +75,10 @@ export function isRetryableEndpointError(error: unknown): boolean {
     return true;
   }
   if (error instanceof EndpointNotAvailableError) {
-    return true;
+    if (error.status === undefined) {
+      return true;
+    }
+    return error.status >= 500 || error.status === 408;
   }
   return false;
 }

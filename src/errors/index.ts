@@ -34,7 +34,10 @@ export class MissingApiKeyError extends TokenKitError {
 }
 
 export class EndpointNotAvailableError extends TokenKitError {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
     super(message, "ENDPOINT_NOT_AVAILABLE");
     this.name = "EndpointNotAvailableError";
   }

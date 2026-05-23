@@ -41,6 +41,31 @@ describe("countTokens", () => {
     expect(result.tokens).toBeGreaterThan(0);
   });
 
+  it("auto mode throws on client errors instead of falling back to local", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        text: async () => "invalid model",
+      }),
+    );
+
+    await expect(
+      countTokens({
+        provider: "openai",
+        model: "gpt-4o",
+        text: "Hello",
+        mode: "auto",
+        apiKey: "key",
+      }),
+    ).rejects.toMatchObject({
+      name: "EndpointNotAvailableError",
+      status: 400,
+    });
+  });
+
   it("estimateTokens forces local mode", async () => {
     vi.stubGlobal("fetch", vi.fn());
 
