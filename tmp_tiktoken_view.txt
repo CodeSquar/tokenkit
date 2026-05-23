@@ -1,4 +1,5 @@
-﻿import { resolveModelCatalog } from "../../models/resolve-model.js";
+﻿import { encoding_for_model } from "tiktoken";
+import { resolveModelCatalog } from "../../models/resolve-model.js";
 
 const TOKENS_PER_MESSAGE = 3;
 
@@ -26,30 +27,15 @@ function isChatModel(model: string): boolean {
   return resolved.startsWith("gpt-");
 }
 
-async function loadEncodingForModel() {
-  try {
-    const tiktoken = await import("tiktoken");
-    return tiktoken.encoding_for_model;
-  } catch (error) {
-    const reason =
-      error instanceof Error && error.message
-        ? ` Original error: ${error.message}`
-        : "";
-    throw new Error(
-      "Local token counting requires the \"tiktoken\" package and its WASM binary to be available at runtime. Install it with: npm install tiktoken." +
-        reason,
-    );
-  }
-}
-
-export async function countTiktoken(model: string, text: string): Promise<number> {
-  const encodingForModel = await loadEncodingForModel();
+export function countTiktoken(model: string, text: string): number {
   const encodingModel = resolveEncodingModel(model);
   let enc;
   try {
-    enc = encodingForModel(encodingModel as Parameters<typeof encodingForModel>[0]);
+    enc = encoding_for_model(
+      encodingModel as Parameters<typeof encoding_for_model>[0],
+    );
   } catch {
-    enc = encodingForModel("gpt-4o");
+    enc = encoding_for_model("gpt-4o");
   }
 
   try {

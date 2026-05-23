@@ -10,6 +10,6 @@ export interface ProviderAdapter {
   readonly localStrategy: LocalStrategy;
   supportsEndpoint(): boolean;
   countViaEndpoint(input: AnyNormalizedInput): Promise<number>;
-  countViaLocal(input: AnyNormalizedInput): number;
+  countViaLocal(input: AnyNormalizedInput): Promise<number>;
   getLocalMethod(): Method;
 }

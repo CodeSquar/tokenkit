@@ -47,7 +47,7 @@ export const openaiAdapter: ProviderAdapter = {
     return response.input_tokens;
   },
 
-  countViaLocal(input: AnyNormalizedInput): number {
+  async countViaLocal(input: AnyNormalizedInput): Promise<number> {
     return runLocal(this.localStrategy, input);
   },
 };

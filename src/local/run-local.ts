@@ -22,10 +22,10 @@ export function getMethodForStrategy(strategy: LocalStrategy): Method {
   }
 }
 
-export function runLocal(
+export async function runLocal(
   strategy: LocalStrategy,
   input: AnyNormalizedInput,
-): number {
+): Promise<number> {
   const text =
     input.provider === "openai"
       ? openAIInputToText(input.payload as string | ResponseInput, input.countAssistantTools)
@@ -43,7 +43,7 @@ export function runLocal(
 
   switch (strategy) {
     case "tiktoken":
-      return countTiktoken(input.model, text);
+      return await countTiktoken(input.model, text);
     case "anthropic_tokenizer":
       return countAnthropicLocal(text);
     case "heuristic":

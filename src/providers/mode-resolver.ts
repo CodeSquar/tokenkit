@@ -16,7 +16,7 @@ export async function executeCount(
 ): Promise<CountExecution> {
   if (mode === "local") {
     return {
-      tokens: adapter.countViaLocal(input),
+      tokens: await adapter.countViaLocal(input),
       method: adapter.getLocalMethod(),
       estimated: true,
     };
@@ -51,7 +51,7 @@ export async function executeCount(
   }
 
   return {
-    tokens: adapter.countViaLocal(input),
+    tokens: await adapter.countViaLocal(input),
     method: adapter.getLocalMethod(),
     estimated: true,
   };

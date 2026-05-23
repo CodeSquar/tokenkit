@@ -7,8 +7,8 @@ describe("google adapter", () => {
     vi.unstubAllGlobals();
   });
 
-  it("delegates local count to heuristic strategy", () => {
-    const tokens = googleAdapter.countViaLocal({
+  it("delegates local count to heuristic strategy", async () => {
+    const tokens = await googleAdapter.countViaLocal({
       provider: "google",
       model: "gemini-2.0-flash",
       payload: [{ role: "user", parts: [{ text: "Hello" }] }],

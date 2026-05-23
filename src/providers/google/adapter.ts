@@ -54,7 +54,7 @@ export const googleAdapter: ProviderAdapter = {
     return response.totalTokens;
   },
 
-  countViaLocal(input: AnyNormalizedInput): number {
+  async countViaLocal(input: AnyNormalizedInput): Promise<number> {
     return runLocal(this.localStrategy, input);
   },
 };
