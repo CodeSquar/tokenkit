@@ -28,6 +28,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "try:openai": "npx tsx scripts/try-api.ts",
+    "try:all": "npx tsx scripts/try-all.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
