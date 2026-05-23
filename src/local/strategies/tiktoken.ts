@@ -1,4 +1,5 @@
-﻿import { resolveModelCatalog } from "../../models/resolve-model.js";
+import { LocalTokenizerUnavailableError } from "../../errors/index.js";
+import { resolveModelCatalog } from "../../models/resolve-model.js";
 
 const TOKENS_PER_MESSAGE = 3;
 
@@ -31,14 +32,8 @@ async function loadEncodingForModel() {
     const tiktoken = await import("tiktoken");
     return tiktoken.encoding_for_model;
   } catch (error) {
-    const reason =
-      error instanceof Error && error.message
-        ? ` Original error: ${error.message}`
-        : "";
-    throw new Error(
-      "Local token counting requires the \"tiktoken\" package and its WASM binary to be available at runtime. Install it with: npm install tiktoken." +
-        reason,
-    );
+    const reason = error instanceof Error && error.message ? error.message : undefined;
+    throw new LocalTokenizerUnavailableError("tiktoken", reason);
   }
 }
 

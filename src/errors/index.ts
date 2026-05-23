@@ -50,6 +50,17 @@ export class RateLimitError extends TokensUsageError {
   }
 }
 
+export class LocalTokenizerUnavailableError extends TokensUsageError {
+  constructor(tokenizer: string, reason?: string) {
+    const suffix = reason ? ` Original error: ${reason}` : "";
+    super(
+      `Local token counting requires "${tokenizer}" and its WASM/assets to be available at runtime.${suffix}`,
+      "LOCAL_TOKENIZER_UNAVAILABLE",
+    );
+    this.name = "LocalTokenizerUnavailableError";
+  }
+}
+
 export class ValidationError extends TokensUsageError {
   constructor(message: string) {
     super(message, "VALIDATION_ERROR");

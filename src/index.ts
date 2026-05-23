@@ -31,6 +31,7 @@ export {
   MissingApiKeyError,
   EndpointNotAvailableError,
   RateLimitError,
+  LocalTokenizerUnavailableError,
   ValidationError,
 } from "./errors/index.js";
 export type { ModelMessage, UIMessage } from "ai";

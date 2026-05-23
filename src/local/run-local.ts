@@ -45,7 +45,7 @@ export async function runLocal(
     case "tiktoken":
       return await countTiktoken(input.model, text);
     case "anthropic_tokenizer":
-      return countAnthropicLocal(text);
+      return await countAnthropicLocal(text);
     case "heuristic":
       return countHeuristic({ text });
   }
