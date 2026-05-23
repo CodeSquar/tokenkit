@@ -1,7 +1,7 @@
 import type { Content, Part } from "@google/genai";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
-import type { ModelMessage } from "ai";
 import type { ResponseInput, ResponseInputItem } from "openai/resources/responses/responses";
+import type { ModelMessage } from "ai";
 export interface NormalizedAISDKPayload {
   openaiInput: ResponseInput;
   anthropicMessages: MessageParam[];
@@ -18,10 +18,40 @@ function serializeToolResultOutput(output: unknown): string {
   return JSON.stringify(output);
 }
 
+type MessagePart = Exclude<ModelMessage["content"], string>[number];
+type TextPart = Extract<MessagePart, { type: "text" }>;
+type ReasoningPart = Extract<MessagePart, { type: "reasoning" }>;
+type ToolCallPart = Extract<MessagePart, { type: "tool-call" }>;
+type ToolResultPart = Extract<MessagePart, { type: "tool-result" }>;
+
+function isTextPart(part: MessagePart): part is TextPart {
+  return part.type === "text" && typeof part.text === "string";
+}
+
+function isToolCallPart(part: MessagePart): part is ToolCallPart {
+  return (
+    part.type === "tool-call"
+    && typeof part.toolCallId === "string"
+    && typeof part.toolName === "string"
+  );
+}
+
+function isToolResultPart(part: MessagePart): part is ToolResultPart {
+  return (
+    part.type === "tool-result"
+    && typeof part.toolCallId === "string"
+    && typeof part.toolName === "string"
+  );
+}
+
+function isReasoningPart(part: MessagePart): part is ReasoningPart {
+  return part.type === "reasoning" && typeof part.text === "string";
+}
+
 function contentToText(content: ModelMessage["content"]): string {
   if (typeof content === "string") return content;
   return content
-    .filter((part) => part.type === "text")
+    .filter(isTextPart)
     .map((part) => part.text)
     .join("\n");
 }
@@ -55,7 +85,7 @@ export function normalizeAISDKMessages(messages: ModelMessage[]): NormalizedAISD
       }
 
       const assistantTextParts = message.content
-        .filter((part) => part.type === "text" || part.type === "reasoning")
+        .filter((part): part is TextPart | ReasoningPart => isTextPart(part) || isReasoningPart(part))
         .map((part) => part.text);
       const assistantText = assistantTextParts.join("\n");
       if (assistantText.length > 0) {
@@ -64,7 +94,7 @@ export function normalizeAISDKMessages(messages: ModelMessage[]): NormalizedAISD
         googleContents.push({ role: "model", parts: [{ text: assistantText }] });
       }
 
-      const toolCalls = message.content.filter((part) => part.type === "tool-call");
+      const toolCalls = message.content.filter(isToolCallPart);
       for (const toolCall of toolCalls) {
         openaiInput.push({
           type: "function_call",
@@ -87,7 +117,7 @@ export function normalizeAISDKMessages(messages: ModelMessage[]): NormalizedAISD
         googleContents.push({ role: "model", parts: [googlePart] });
       }
 
-      const toolResults = message.content.filter((part) => part.type === "tool-result");
+      const toolResults = message.content.filter(isToolResultPart);
       for (const toolResult of toolResults) {
         openaiInput.push({
           type: "function_call_output",
@@ -112,8 +142,7 @@ export function normalizeAISDKMessages(messages: ModelMessage[]): NormalizedAISD
     }
 
     if (message.role === "tool") {
-      for (const toolResult of message.content) {
-        if (toolResult.type !== "tool-result") continue;
+      for (const toolResult of message.content.filter(isToolResultPart)) {
         openaiInput.push({
           type: "function_call_output",
           call_id: toolResult.toolCallId,

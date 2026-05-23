@@ -11,7 +11,6 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages
 import type { Content } from "@google/genai";
 import { resolveApiKey } from "./utils/env.js";
 import type { ModelMessage, UIMessage } from "ai";
-import { convertToModelMessages } from "ai";
 import { resolveModelCatalog } from "./models/resolve-model.js";
 import { isAISdkModelSupported } from "./models/ai-sdk-support.js";
 import { normalizeAISDKMessages } from "./providers/ai-sdk-normalize.js";
@@ -211,6 +210,30 @@ function readAiSdkMessages(options: CountTokensOptions): {
   return { messages: withAi.aiSdkMessages, uiMessages: withAi.uiMessages };
 }
 
+function isModuleNotFound(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const withCode = error as Error & { code?: string };
+  if (withCode.code === "ERR_MODULE_NOT_FOUND") return true;
+  return /Cannot find module|ERR_MODULE_NOT_FOUND/i.test(error.message);
+}
+
+async function convertUiMessagesToModelMessages(
+  uiMessages: UIMessage[],
+): Promise<ModelMessage[]> {
+  try {
+    const aiSdk = await import("ai");
+    return (await aiSdk.convertToModelMessages(uiMessages as never[])) as ModelMessage[];
+  } catch (error) {
+    if (isModuleNotFound(error)) {
+      invalid(
+        "uiMessages",
+        "requires the optional peer dependency \"ai\". Install it with: npm install ai",
+      );
+    }
+    throw error;
+  }
+}
+
 async function normalizeAISdkMode(options: CountTokensOptions): Promise<AnyNormalizedInput> {
   const model = ensureNonEmptyString(options.model, "model");
   const countAssistantTools = options.countAssistantTools ?? true;
@@ -233,7 +256,7 @@ async function normalizeAISdkMode(options: CountTokensOptions): Promise<AnyNorma
     if (uiMessages.length === 0) {
       invalid("uiMessages", "must include at least one message");
     }
-    aiSdkMessages = await convertToModelMessages(uiMessages);
+    aiSdkMessages = await convertUiMessagesToModelMessages(uiMessages);
   } else {
     invalid("aiSdkMessages", "is required when inputMode is \"ai_sdk\" (or pass uiMessages)");
   }

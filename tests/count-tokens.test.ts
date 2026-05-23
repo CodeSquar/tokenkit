@@ -246,4 +246,27 @@ describe("countTokens", () => {
       }),
     ).rejects.toThrow(ValidationError);
   });
+
+  it("throws a clear error when uiMessages are used without ai installed", async () => {
+    vi.resetModules();
+    vi.doMock("ai", () => ({
+      convertToModelMessages: async () => {
+        const error = new Error("Cannot find module 'ai'") as Error & { code?: string };
+        error.code = "ERR_MODULE_NOT_FOUND";
+        throw error;
+      },
+    }));
+
+    const { countTokens: mockedCountTokens } = await import("../src/count-tokens.js");
+
+    await expect(
+      mockedCountTokens({
+        provider: "openai",
+        model: "gpt-4o",
+        inputMode: "ai_sdk",
+        uiMessages: [{ id: "1", role: "user", parts: [{ type: "text", text: "hello" }] }],
+        mode: "local",
+      }),
+    ).rejects.toThrow(/requires the optional peer dependency "ai"/i);
+  });
 });

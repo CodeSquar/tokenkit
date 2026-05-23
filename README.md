@@ -14,6 +14,12 @@ Uses the provider's official endpoint when available (`mode: "endpoint"` or `"au
 npm install tokenkit
 ```
 
+If you pass `uiMessages` with `inputMode: "ai_sdk"`, install AI SDK as well:
+
+```bash
+npm install tokenkit ai
+```
+
 ## Usage
 
 ```ts
@@ -45,8 +51,7 @@ console.log(result.price);
 ### AI SDK (`ModelMessage` / `UIMessage`)
 
 ```ts
-import type { ModelMessage, UIMessage } from "ai";
-import { countTokens } from "tokenkit";
+import { countTokens, type ModelMessage, type UIMessage } from "tokenkit";
 
 const modelMessages: ModelMessage[] = [
   { role: "system", content: "Be concise." },
@@ -80,7 +85,7 @@ Notes:
 - `inputMode: "ai_sdk"` uses strict model validation per provider:
   - model must exist in TokenKit catalog
   - model must be supported by AI SDK for that provider
-- `UIMessage[]` is converted internally with AI SDK `convertToModelMessages`.
+- `UIMessage[]` is converted internally with AI SDK `convertToModelMessages` (requires the `ai` peer dependency).
 - v1 counts text + tool parts; non-text media parts are ignored.
 
 ## Provider Inputs
