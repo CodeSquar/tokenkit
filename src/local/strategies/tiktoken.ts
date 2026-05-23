@@ -1,37 +1,33 @@
 import { encoding_for_model } from "tiktoken";
+import { resolveModelCatalog } from "../../models/resolve-model.js";
 import type { NormalizedInput } from "../../types/index.js";
 import { flattenMessages } from "../../utils/messages.js";
 
 const TOKENS_PER_MESSAGE = 3;
 const TOKENS_PER_NAME = 1;
 
-const CHAT_MODELS = new Set([
-  "gpt-4o",
-  "gpt-4o-mini",
-  "gpt-4",
-  "gpt-4-turbo",
-  "gpt-3.5-turbo",
-  "o1",
-  "o1-mini",
-  "o1-preview",
-  "o3-mini",
-]);
-
 function resolveEncodingModel(model: string): string {
+  const entry = resolveModelCatalog("openai", model);
+  if (entry?.tiktokenEncoding) {
+    return entry.tiktokenEncoding;
+  }
+
   const lower = model.toLowerCase();
   if (lower.startsWith("gpt-4o-mini")) return "gpt-4o-mini";
   if (lower.startsWith("gpt-4o")) return "gpt-4o";
   if (lower.startsWith("gpt-4")) return "gpt-4";
   if (lower.startsWith("gpt-3.5-turbo")) return "gpt-3.5-turbo";
-  if (lower.startsWith("o1-mini")) return "o1-mini";
-  if (lower.startsWith("o1")) return "o1";
-  if (lower.startsWith("o3-mini")) return "o3-mini";
   return model;
 }
 
 function isChatModel(model: string): boolean {
+  const entry = resolveModelCatalog("openai", model);
+  if (typeof entry?.isChatModel === "boolean") {
+    return entry.isChatModel;
+  }
+
   const resolved = resolveEncodingModel(model);
-  return CHAT_MODELS.has(resolved) || resolved.startsWith("gpt-");
+  return resolved.startsWith("gpt-");
 }
 
 export function countTiktoken(input: NormalizedInput): number {

@@ -1,0 +1,177 @@
+{
+  "anthropic:claude-3-5-haiku-20241022": {
+    "inputPer1M": 0.8
+  },
+  "anthropic:claude-3-5-sonnet-20241022": {
+    "inputPer1M": 3.0
+  },
+  "anthropic:claude-haiku-3-5": {
+    "inputPer1M": 0.8
+  },
+  "anthropic:claude-haiku-4-5": {
+    "inputPer1M": 1.0
+  },
+  "anthropic:claude-opus-4-1": {
+    "inputPer1M": 15.0
+  },
+  "anthropic:claude-opus-4-5": {
+    "inputPer1M": 5.0
+  },
+  "anthropic:claude-opus-4-6": {
+    "inputPer1M": 5.0
+  },
+  "anthropic:claude-opus-4-7": {
+    "inputPer1M": 5.0
+  },
+  "anthropic:claude-sonnet-4-5": {
+    "inputPer1M": 3.0
+  },
+  "anthropic:claude-sonnet-4-6": {
+    "inputPer1M": 3.0
+  },
+  "google:gemini-1.5-flash": {
+    "inputPer1M": 0.075
+  },
+  "google:gemini-1.5-pro": {
+    "inputPer1M": 1.25
+  },
+  "google:gemini-2.0-flash": {
+    "inputPer1M": 0.1
+  },
+  "google:gemini-2.5-flash": {
+    "inputPer1M": 0.3
+  },
+  "google:gemini-2.5-flash-lite": {
+    "inputPer1M": 0.1
+  },
+  "google:gemini-2.5-pro": {
+    "inputPer1M": 1.25
+  },
+  "google:gemini-3-flash": {
+    "inputPer1M": 0.5
+  },
+  "google:gemini-3.1-flash-lite": {
+    "inputPer1M": 0.1
+  },
+  "google:gemini-3.1-pro": {
+    "inputPer1M": 2.0
+  },
+  "google:gemini-3.5-flash": {
+    "inputPer1M": 1.5
+  },
+  "openai:gpt-3.5-turbo": {
+    "inputPer1M": 0.5,
+    "tiktokenEncoding": "gpt-3.5-turbo",
+    "isChatModel": true
+  },
+  "openai:gpt-4-turbo": {
+    "inputPer1M": 10.0,
+    "tiktokenEncoding": "gpt-4",
+    "isChatModel": true
+  },
+  "openai:gpt-4.1": {
+    "inputPer1M": 2.0,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-4.1-mini": {
+    "inputPer1M": 0.4,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-4.1-nano": {
+    "inputPer1M": 0.1,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-4o": {
+    "inputPer1M": 2.5,
+    "tiktokenEncoding": "gpt-4o",
+    "isChatModel": true
+  },
+  "openai:gpt-4o-mini": {
+    "inputPer1M": 0.15,
+    "tiktokenEncoding": "gpt-4o-mini",
+    "isChatModel": true
+  },
+  "openai:gpt-5": {
+    "inputPer1M": 1.25,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5-mini": {
+    "inputPer1M": 0.25,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5-nano": {
+    "inputPer1M": 0.05,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.1": {
+    "inputPer1M": 1.25,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.2": {
+    "inputPer1M": 1.75,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.4": {
+    "inputPer1M": 2.5,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.4-mini": {
+    "inputPer1M": 0.75,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.4-nano": {
+    "inputPer1M": 0.2,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.4-pro": {
+    "inputPer1M": 30.0,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.5": {
+    "inputPer1M": 5.0,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:gpt-5.5-pro": {
+    "inputPer1M": 30.0,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  },
+  "openai:o1": {
+    "inputPer1M": 5.0,
+    "tiktokenEncoding": "o1",
+    "isChatModel": true
+  },
+  "openai:o1-mini": {
+    "inputPer1M": 1.1,
+    "tiktokenEncoding": "o1-mini",
+    "isChatModel": true
+  },
+  "openai:o1-preview": {
+    "inputPer1M": 15.0,
+    "tiktokenEncoding": "o1",
+    "isChatModel": true
+  },
+  "openai:o3-mini": {
+    "inputPer1M": 1.21,
+    "tiktokenEncoding": "o3-mini",
+    "isChatModel": true
+  },
+  "openai:o4-mini": {
+    "inputPer1M": 1.1,
+    "tiktokenEncoding": "o200k_base",
+    "isChatModel": true
+  }
+}
