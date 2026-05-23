@@ -15,9 +15,30 @@ export type LocalStrategy =
 
 export type MessageRole = "user" | "assistant" | "system";
 
+export type TextPart = {
+  type: "text";
+  text: string;
+};
+
+export type ToolCallPart = {
+  type: "tool_call";
+  id?: string;
+  name: string;
+  arguments: string;
+};
+
+export type ToolOutputPart = {
+  type: "tool_output";
+  callId: string;
+  output: string;
+};
+
+export type MessagePart = TextPart | ToolCallPart | ToolOutputPart;
+
 export interface Message {
   role: MessageRole;
-  content: string;
+  content?: string;
+  parts?: MessagePart[];
   name?: string;
 }
 
@@ -29,6 +50,7 @@ export interface CountTokensOptions {
   mode?: CountMode;
   apiKey?: string;
   system?: string;
+  countAssistantTools?: boolean;
 }
 
 export type EstimateTokensOptions = Omit<CountTokensOptions, "mode">;
@@ -52,6 +74,7 @@ export interface NormalizedInput {
   messages: Message[];
   system?: string;
   apiKey?: string;
+  countAssistantTools: boolean;
 }
 
 export interface CalculatePriceOptions {
@@ -64,4 +87,5 @@ export interface HeuristicInput {
   messages?: Message[];
   text?: string;
   system?: string;
+  countAssistantTools?: boolean;
 }

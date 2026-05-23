@@ -23,12 +23,12 @@ describe("calculatePrice", () => {
   it("scales linearly with tokens", () => {
     const half = calculatePrice({
       provider: "anthropic",
-      model: "claude-sonnet-4",
+      model: "claude-sonnet-4-6",
       tokens: 500_000,
     });
     const full = calculatePrice({
       provider: "anthropic",
-      model: "claude-sonnet-4",
+      model: "claude-sonnet-4-6",
       tokens: 1_000_000,
     });
     expect(half!.usd * 2).toBeCloseTo(full!.usd);

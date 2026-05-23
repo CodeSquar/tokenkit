@@ -6,6 +6,77 @@ import {
   SAMPLE_PROMPT,
 } from "./helpers.js";
 
+const TOOL_MESSAGES = {
+  openai: [
+    {
+      role: "assistant" as const,
+      parts: [
+        { type: "text" as const, text: "I'll call a tool." },
+        {
+          type: "tool_call" as const,
+          id: "call_1",
+          name: "get_weather",
+          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
+        },
+        {
+          type: "tool_output" as const,
+          callId: "call_1",
+          output: "{\"temp\":20,\"condition\":\"clear\"}",
+        },
+      ],
+    },
+    { role: "user" as const, content: "Thanks." },
+  ],
+  anthropic: [
+    {
+      role: "assistant" as const,
+      parts: [
+        { type: "text" as const, text: "I'll call a tool." },
+        {
+          type: "tool_call" as const,
+          id: "toolu_1",
+          name: "get_weather",
+          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
+        },
+      ],
+    },
+    {
+      role: "user" as const,
+      parts: [
+        {
+          type: "tool_output" as const,
+          callId: "toolu_1",
+          output: "{\"temp\":20,\"condition\":\"clear\"}",
+        },
+      ],
+    },
+  ],
+  google: [
+    {
+      role: "assistant" as const,
+      parts: [
+        { type: "text" as const, text: "I'll call a tool." },
+        {
+          type: "tool_call" as const,
+          id: "call_1",
+          name: "get_weather",
+          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
+        },
+      ],
+    },
+    {
+      role: "user" as const,
+      parts: [
+        {
+          type: "tool_output" as const,
+          callId: "call_1",
+          output: "{\"temp\":20,\"condition\":\"clear\"}",
+        },
+      ],
+    },
+  ],
+};
+
 describe("integration / OpenAI", () => {
   const canRun = hasEnvKey("OPENAI_API_KEY");
 
@@ -26,6 +97,26 @@ describe("integration / OpenAI", () => {
       expect(result.model).toBe(INTEGRATION_MODELS.openai);
     },
   );
+
+  it.skipIf(!canRun)("counts assistant tool parts when enabled (endpoint)", async () => {
+    const withTools = await countTokens({
+      provider: "openai",
+      model: INTEGRATION_MODELS.openai,
+      messages: TOOL_MESSAGES.openai,
+      mode: "endpoint",
+      countAssistantTools: true,
+    });
+
+    const withoutTools = await countTokens({
+      provider: "openai",
+      model: INTEGRATION_MODELS.openai,
+      messages: TOOL_MESSAGES.openai,
+      mode: "endpoint",
+      countAssistantTools: false,
+    });
+
+    expect(withTools.tokens).toBeGreaterThan(withoutTools.tokens);
+  });
 });
 
 describe("integration / Anthropic", () => {
@@ -48,6 +139,26 @@ describe("integration / Anthropic", () => {
       expect(result.model).toBe(INTEGRATION_MODELS.anthropic);
     },
   );
+
+  it.skipIf(!canRun)("counts assistant tool parts when enabled (endpoint)", async () => {
+    const withTools = await countTokens({
+      provider: "anthropic",
+      model: INTEGRATION_MODELS.anthropic,
+      messages: TOOL_MESSAGES.anthropic,
+      mode: "endpoint",
+      countAssistantTools: true,
+    });
+
+    const withoutTools = await countTokens({
+      provider: "anthropic",
+      model: INTEGRATION_MODELS.anthropic,
+      messages: TOOL_MESSAGES.anthropic,
+      mode: "endpoint",
+      countAssistantTools: false,
+    });
+
+    expect(withTools.tokens).toBeGreaterThan(withoutTools.tokens);
+  });
 });
 
 describe("integration / Google Gemini", () => {
@@ -70,6 +181,26 @@ describe("integration / Google Gemini", () => {
       expect(result.model).toBe(INTEGRATION_MODELS.google);
     },
   );
+
+  it.skipIf(!canRun)("counts assistant tool parts when enabled (endpoint)", async () => {
+    const withTools = await countTokens({
+      provider: "google",
+      model: INTEGRATION_MODELS.google,
+      messages: TOOL_MESSAGES.google,
+      mode: "endpoint",
+      countAssistantTools: true,
+    });
+
+    const withoutTools = await countTokens({
+      provider: "google",
+      model: INTEGRATION_MODELS.google,
+      messages: TOOL_MESSAGES.google,
+      mode: "endpoint",
+      countAssistantTools: false,
+    });
+
+    expect(withTools.tokens).toBeGreaterThan(withoutTools.tokens);
+  });
 });
 
 describe("integration / all providers", () => {

@@ -24,6 +24,7 @@ function normalizeInput(options: CountTokensOptions): NormalizedInput {
     messages,
     system,
     apiKey: resolveApiKey(options.provider, options.apiKey),
+    countAssistantTools: options.countAssistantTools ?? true,
   };
 }
 

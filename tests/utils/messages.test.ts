@@ -29,7 +29,9 @@ describe("partitionSystemMessages", () => {
     ]);
 
     expect(result.system).toBeUndefined();
-    expect(result.messages).toEqual([{ role: "user", content: "Hello" }]);
+    expect(result.messages).toEqual([
+      { role: "user", content: "Hello" },
+    ]);
   });
 
   it("throws when only system messages are provided", () => {
@@ -42,7 +44,13 @@ describe("partitionSystemMessages", () => {
 describe("resolveMessages", () => {
   it("wraps text as a user message", () => {
     expect(resolveMessages(undefined, "Hello")).toEqual([
-      { role: "user", content: "Hello" },
+      { role: "user", content: "Hello", parts: [{ type: "text", text: "Hello" }] },
     ]);
+  });
+
+  it("throws when a message has neither content nor parts", () => {
+    expect(() =>
+      resolveMessages([{ role: "user" } as never]),
+    ).toThrow(ValidationError);
   });
 });

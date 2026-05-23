@@ -49,4 +49,46 @@ describe("countHeuristic", () => {
     const long = countHeuristic({ text: "a".repeat(400) });
     expect(long).toBeGreaterThan(short);
   });
+
+  it("can exclude assistant tool parts from local counting", () => {
+    const withTools = countHeuristic({
+      messages: [
+        {
+          role: "assistant",
+          parts: [
+            { type: "text", text: "Calling tool with detailed params." },
+            {
+              type: "tool_call",
+              id: "call_1",
+              name: "get_weather",
+              arguments:
+                "{\"city\":\"Paris\",\"units\":\"celsius\",\"includeForecast\":true,\"days\":7}",
+            },
+          ],
+        },
+      ],
+      countAssistantTools: true,
+    });
+
+    const withoutTools = countHeuristic({
+      messages: [
+        {
+          role: "assistant",
+          parts: [
+            { type: "text", text: "Calling tool with detailed params." },
+            {
+              type: "tool_call",
+              id: "call_1",
+              name: "get_weather",
+              arguments:
+                "{\"city\":\"Paris\",\"units\":\"celsius\",\"includeForecast\":true,\"days\":7}",
+            },
+          ],
+        },
+      ],
+      countAssistantTools: false,
+    });
+
+    expect(withoutTools).toBeLessThan(withTools);
+  });
 });

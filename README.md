@@ -20,6 +20,7 @@ const result = await countTokens({
   model: "claude-sonnet-4-20250514",
   messages: [{ role: "user", content: "Hello world" }],
   apiKey: process.env.ANTHROPIC_API_KEY,
+  countAssistantTools: true, // default; includes tool calls + tool outputs in assistant turns
 });
 
 console.log(result.tokens);    // e.g. 14
@@ -108,7 +109,7 @@ npm run try:openai
 ## Limits (MVP)
 
 - Input/prompt tokens only, no output counting
-- Text messages only (no multimodal)
+- Text-first messages with optional tool parts (`tool_call`, `tool_output`)
 - Gemini via AI Studio, not Vertex AI
 - Heuristic counts are approximate (~25% off on typical prose)
 

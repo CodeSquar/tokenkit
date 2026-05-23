@@ -66,4 +66,112 @@ describe("google adapter", () => {
       { role: "user", parts: [{ text: "Hello" }] },
     ]);
   });
+
+  it("includes functionCall/functionResponse parts by default", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ totalTokens: 10 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await countTokens({
+      provider: "google",
+      model: "gemini-2.0-flash",
+      messages: [
+        {
+          role: "assistant",
+          parts: [
+            { type: "text", text: "Calling tool." },
+            {
+              type: "tool_call",
+              id: "call_1",
+              name: "get_weather",
+              arguments: "{\"city\":\"Paris\"}",
+            },
+          ],
+        },
+        {
+          role: "user",
+          parts: [
+            {
+              type: "tool_output",
+              callId: "call_1",
+              output: "{\"temp\":20}",
+            },
+          ],
+        },
+      ],
+      mode: "endpoint",
+      apiKey: "gemini-key",
+    });
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body.contents).toEqual([
+      {
+        role: "model",
+        parts: [
+          { text: "Calling tool." },
+          {
+            functionCall: {
+              id: "call_1",
+              name: "get_weather",
+              args: { city: "Paris" },
+            },
+          },
+        ],
+      },
+      {
+        role: "user",
+        parts: [
+          {
+            functionResponse: {
+              id: "call_1",
+              name: "tool_result",
+              response: { output: "{\"temp\":20}" },
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("skips functionCall/functionResponse when countAssistantTools is false", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ totalTokens: 10 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await countTokens({
+      provider: "google",
+      model: "gemini-2.0-flash",
+      messages: [
+        {
+          role: "assistant",
+          parts: [
+            { type: "text", text: "Calling tool." },
+            {
+              type: "tool_call",
+              id: "call_1",
+              name: "get_weather",
+              arguments: "{\"city\":\"Paris\"}",
+            },
+          ],
+        },
+      ],
+      mode: "endpoint",
+      apiKey: "gemini-key",
+      countAssistantTools: false,
+    });
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body.contents).toEqual([
+      {
+        role: "model",
+        parts: [{ text: "Calling tool." }],
+      },
+    ]);
+  });
 });

@@ -1,5 +1,10 @@
 import { getMethodForStrategy, runLocal } from "../../local/run-local.js";
-import type { Method, NormalizedInput } from "../../types/index.js";
+import type { MessagePart, Method, NormalizedInput } from "../../types/index.js";
+import type {
+  ResponseFunctionToolCall,
+  ResponseInput,
+  ResponseInputItem,
+} from "openai/resources/responses/responses";
 import { providerFetch } from "../../utils/fetch.js";
 import type { ProviderAdapter } from "../base.js";
 
@@ -7,17 +12,73 @@ interface OpenAIInputTokensResponse {
   input_tokens: number;
 }
 
-function buildInput(input: NormalizedInput): string | Array<{ role: string; content: string }> {
-  if (input.messages.length === 1 && input.messages[0]!.role === "user" && !input.system) {
-    return input.messages[0]!.content;
+function mapPartToInputItem(
+  part: MessagePart,
+  countAssistantTools: boolean,
+): ResponseInputItem[] {
+  if (part.type === "text") return [];
+  if (!countAssistantTools) {
+    return [];
+  }
+  if (part.type === "tool_call") {
+    const callId = part.id ?? `call_${part.name}`;
+    const item: ResponseFunctionToolCall = {
+      type: "function_call",
+      call_id: callId,
+      name: part.name,
+      arguments: part.arguments,
+    };
+    return [
+      item,
+    ];
+  }
+  const outputItem: ResponseInputItem = {
+    type: "function_call_output",
+    call_id: part.callId,
+    output: part.output,
+  };
+  return [
+    outputItem,
+  ];
+}
+
+function buildInput(
+  input: NormalizedInput,
+): string | ResponseInput {
+  const firstMessage = input.messages[0];
+  const firstPart = firstMessage?.parts?.[0];
+  const onlySimpleUserText =
+    input.messages.length === 1 &&
+    firstMessage?.role === "user" &&
+    !input.system &&
+    firstMessage?.parts?.length === 1 &&
+    firstPart?.type === "text";
+
+  if (onlySimpleUserText && firstPart?.type === "text") {
+    return firstPart.text;
   }
 
-  const items: Array<{ role: string; content: string }> = [];
+  const items: ResponseInput = [];
   if (input.system) {
     items.push({ role: "system", content: input.system });
   }
   for (const message of input.messages) {
-    items.push({ role: message.role, content: message.content });
+    const parts = message.parts ?? [];
+    const textParts = parts
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("\n");
+
+    if (textParts) {
+      items.push({ role: message.role, content: textParts });
+    }
+
+    for (const part of parts) {
+      if (part.type === "text") {
+        continue;
+      }
+      items.push(...mapPartToInputItem(part, input.countAssistantTools));
+    }
   }
   return items;
 }

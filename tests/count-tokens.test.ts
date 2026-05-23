@@ -115,4 +115,47 @@ describe("countTokens", () => {
     });
     expect(unknown.price).toBeNull();
   });
+
+  it("defaults countAssistantTools to true", async () => {
+    const messages = [
+      {
+        role: "assistant" as const,
+        parts: [
+          { type: "text" as const, text: "Checking weather." },
+          {
+            type: "tool_call" as const,
+            id: "call_1",
+            name: "get_weather",
+            arguments: "{\"city\":\"Paris\"}",
+          },
+        ],
+      },
+    ];
+
+    const omitted = await countTokens({
+      provider: "openai",
+      model: "gpt-4o",
+      messages,
+      mode: "local",
+    });
+
+    const explicitTrue = await countTokens({
+      provider: "openai",
+      model: "gpt-4o",
+      messages,
+      mode: "local",
+      countAssistantTools: true,
+    });
+
+    const explicitFalse = await countTokens({
+      provider: "openai",
+      model: "gpt-4o",
+      messages,
+      mode: "local",
+      countAssistantTools: false,
+    });
+
+    expect(omitted.tokens).toBe(explicitTrue.tokens);
+    expect(explicitFalse.tokens).toBeLessThan(explicitTrue.tokens);
+  });
 });

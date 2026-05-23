@@ -1,7 +1,7 @@
 import { encoding_for_model } from "tiktoken";
 import { resolveModelCatalog } from "../../models/resolve-model.js";
 import type { NormalizedInput } from "../../types/index.js";
-import { flattenMessages } from "../../utils/messages.js";
+import { flattenMessages, stringifyMessageParts } from "../../utils/messages.js";
 
 const TOKENS_PER_MESSAGE = 3;
 const TOKENS_PER_NAME = 1;
@@ -43,7 +43,15 @@ export function countTiktoken(input: NormalizedInput): number {
 
   try {
     if (!isChatModel(input.model)) {
-      const text = flattenMessages(input.messages, input.system);
+      const text = flattenMessages(
+        input.messages.map((message) => ({
+          ...message,
+          content: stringifyMessageParts(message, {
+            includeTools: input.countAssistantTools,
+          }),
+        })),
+        input.system,
+      );
       return enc.encode(text).length;
     }
 
@@ -55,7 +63,11 @@ export function countTiktoken(input: NormalizedInput): number {
 
     for (const message of input.messages) {
       tokens += TOKENS_PER_MESSAGE;
-      tokens += enc.encode(message.content).length;
+      tokens += enc.encode(
+        stringifyMessageParts(message, {
+          includeTools: input.countAssistantTools,
+        }),
+      ).length;
       if (message.name) {
         tokens += enc.encode(message.name).length;
         tokens += TOKENS_PER_NAME;
