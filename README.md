@@ -17,7 +17,7 @@ import { countTokens, estimateTokens } from "tokenkit";
 
 const result = await countTokens({
   provider: "openai",
-  model: "gpt-4o",
+  model: "gpt-5.5",
   input: [
     { role: "user", content: "Hello" },
     {
@@ -44,7 +44,7 @@ console.log(result.price);
 ```ts
 await countTokens({
   provider: "openai",
-  model: "gpt-4o",
+  model: "gpt-5.5",
   input: "Hello world", // or ResponseInput
 });
 ```
@@ -54,7 +54,7 @@ await countTokens({
 ```ts
 await countTokens({
   provider: "anthropic",
-  model: "claude-sonnet-4-20250514",
+  model: "claude-sonnet-4-6",
   messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
   system: "Be concise",
 });
@@ -65,7 +65,7 @@ await countTokens({
 ```ts
 await countTokens({
   provider: "google",
-  model: "gemini-2.0-flash",
+  model: "gemini-3.5-flash",
   contents: [{ role: "user", parts: [{ text: "Hello" }] }],
 });
 ```
