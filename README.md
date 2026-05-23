@@ -213,10 +213,7 @@ npm test
 npm run test:integration
 npm run try:all
 npm run try:openai
-npm run try:google
 ```
-
-`npm run try:google` runs an AI SDK matrix over all `google:*` models in `src/models/catalog.json` and prints which models succeed/fail in `local` and `endpoint` mode.
 
 ## Notes
 
