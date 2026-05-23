@@ -51,6 +51,7 @@
     "@anthropic-ai/sdk": "^0.98.0",
     "@google/genai": "^2.6.0",
     "@types/node": "^22.15.21",
+    "ai": "^6.0.191",
     "dotenv": "^17.4.2",
     "openai": "^6.39.0",
     "tsup": "^8.5.0",

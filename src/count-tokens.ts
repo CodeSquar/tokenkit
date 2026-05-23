@@ -10,6 +10,11 @@ import type {
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
 import type { Content } from "@google/genai";
 import { resolveApiKey } from "./utils/env.js";
+import type { ModelMessage, UIMessage } from "ai";
+import { convertToModelMessages } from "ai";
+import { resolveModelCatalog } from "./models/resolve-model.js";
+import { isAISdkModelSupported } from "./models/ai-sdk-support.js";
+import { normalizeAISDKMessages } from "./providers/ai-sdk-normalize.js";
 
 function invalid(path: string, reason: string): never {
   throw new ValidationError(`${path}: ${reason}`);
@@ -112,13 +117,16 @@ function normalizeTextMode(options: CountTokensOptions): AnyNormalizedInput {
   };
 }
 
-function normalizeInput(options: CountTokensOptions): AnyNormalizedInput {
+async function normalizeInput(options: CountTokensOptions): Promise<AnyNormalizedInput> {
   const inputMode = options.inputMode ?? "provider";
-  if (inputMode !== "provider" && inputMode !== "text") {
-    invalid("inputMode", "must be \"provider\" or \"text\"");
+  if (inputMode !== "provider" && inputMode !== "text" && inputMode !== "ai_sdk") {
+    invalid("inputMode", "must be \"provider\", \"text\" or \"ai_sdk\"");
   }
   if (inputMode === "text") {
     return normalizeTextMode(options);
+  }
+  if (inputMode === "ai_sdk") {
+    return normalizeAISdkMode(options);
   }
 
   const model = ensureNonEmptyString(options.model, "model");
@@ -183,10 +191,92 @@ function normalizeInput(options: CountTokensOptions): AnyNormalizedInput {
   };
 }
 
+function ensureAiSdkModelAllowed(provider: CountTokensOptions["provider"], model: string): void {
+  if (!resolveModelCatalog(provider, model)) {
+    invalid("model", `is not present in TokenKit catalog for provider "${provider}"`);
+  }
+  if (!isAISdkModelSupported(provider, model)) {
+    invalid("model", `is not supported by AI SDK for provider "${provider}"`);
+  }
+}
+
+function readAiSdkMessages(options: CountTokensOptions): {
+  messages?: ModelMessage[];
+  uiMessages?: UIMessage[];
+} {
+  const withAi = options as CountTokensOptions & {
+    aiSdkMessages?: ModelMessage[];
+    uiMessages?: UIMessage[];
+  };
+  return { messages: withAi.aiSdkMessages, uiMessages: withAi.uiMessages };
+}
+
+async function normalizeAISdkMode(options: CountTokensOptions): Promise<AnyNormalizedInput> {
+  const model = ensureNonEmptyString(options.model, "model");
+  const countAssistantTools = options.countAssistantTools ?? true;
+  const apiKey = resolveApiKey(options.provider, options.apiKey);
+  const { messages, uiMessages } = readAiSdkMessages(options);
+
+  ensureAiSdkModelAllowed(options.provider, model);
+
+  if (messages !== undefined && uiMessages !== undefined) {
+    invalid("aiSdkMessages", "cannot be used together with uiMessages");
+  }
+
+  let aiSdkMessages: ModelMessage[];
+  if (Array.isArray(messages)) {
+    if (messages.length === 0) {
+      invalid("aiSdkMessages", "must include at least one message");
+    }
+    aiSdkMessages = messages;
+  } else if (Array.isArray(uiMessages)) {
+    if (uiMessages.length === 0) {
+      invalid("uiMessages", "must include at least one message");
+    }
+    aiSdkMessages = await convertToModelMessages(uiMessages);
+  } else {
+    invalid("aiSdkMessages", "is required when inputMode is \"ai_sdk\" (or pass uiMessages)");
+  }
+
+  const normalized = normalizeAISDKMessages(aiSdkMessages);
+
+  if (options.provider === "openai") {
+    return {
+      provider: "openai",
+      model,
+      payload: normalized.openaiInput,
+      apiKey,
+      countAssistantTools,
+    };
+  }
+
+  if (options.provider === "anthropic") {
+    return {
+      provider: "anthropic",
+      model,
+      payload: normalized.anthropicMessages,
+      system: normalized.system,
+      apiKey,
+      countAssistantTools,
+    };
+  }
+
+  return {
+    provider: "google",
+    model,
+    payload: normalized.googleContents,
+    system: normalized.system
+      ? { role: "system", parts: [{ text: normalized.system }] }
+      : undefined,
+    apiKey,
+    countAssistantTools,
+  };
+}
+
 export async function countTokens(
   options: CountTokensOptions,
 ): Promise<CountTokensResult> {
-  const input = normalizeInput(options);
+  const input = await normalizeInput(options);
   const mode = options.mode ?? "auto";
   const adapter = getAdapter(options.provider);
   const execution = await executeCount(adapter, input, mode);

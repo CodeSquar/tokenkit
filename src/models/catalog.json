@@ -29,12 +29,6 @@
   "anthropic:claude-sonnet-4-6": {
     "inputPer1M": 3.0
   },
-  "google:gemini-1.5-flash": {
-    "inputPer1M": 0.075
-  },
-  "google:gemini-1.5-pro": {
-    "inputPer1M": 1.25
-  },
   "google:gemini-2.0-flash": {
     "inputPer1M": 0.1
   },
@@ -47,13 +41,16 @@
   "google:gemini-2.5-pro": {
     "inputPer1M": 1.25
   },
-  "google:gemini-3-flash": {
+  "google:gemini-3-flash-preview": {
     "inputPer1M": 0.5
+  },
+  "google:gemini-3-pro-preview": {
+    "inputPer1M": 2.0
   },
   "google:gemini-3.1-flash-lite": {
     "inputPer1M": 0.1
   },
-  "google:gemini-3.1-pro": {
+  "google:gemini-3.1-pro-preview": {
     "inputPer1M": 2.0
   },
   "google:gemini-3.5-flash": {

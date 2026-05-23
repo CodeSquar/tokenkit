@@ -39,4 +39,32 @@ describe("google adapter", () => {
     expect(result.tokens).toBe(10);
     expect(result.method).toBe("provider_endpoint");
   });
+
+  it("uses generateContentRequest when systemInstruction is present", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ totalTokens: 10 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await countTokens({
+      provider: "google",
+      model: "gemini-2.0-flash",
+      inputMode: "provider",
+      contents: [{ role: "user", parts: [{ text: "Hello" }] }],
+      systemInstruction: { role: "system", parts: [{ text: "Be concise" }] },
+      mode: "endpoint",
+      apiKey: "gemini-key",
+    });
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body.generateContentRequest).toBeDefined();
+    expect(body.generateContentRequest.systemInstruction).toEqual({
+      role: "system",
+      parts: [{ text: "Be concise" }],
+    });
+    expect(body.generateContentRequest.model).toBe("models/gemini-2.0-flash");
+    expect(body.contents).toBeUndefined();
+  });
 });

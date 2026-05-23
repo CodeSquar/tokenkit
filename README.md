@@ -40,6 +40,40 @@ console.log(result.method);
 console.log(result.price);
 ```
 
+### AI SDK (`ModelMessage` / `UIMessage`)
+
+```ts
+import type { ModelMessage, UIMessage } from "ai";
+import { countTokens } from "tokenkit";
+
+const modelMessages: ModelMessage[] = [
+  { role: "system", content: "Be concise." },
+  { role: "user", content: [{ type: "text", text: "Hello" }] },
+];
+
+await countTokens({
+  provider: "openai",
+  model: "gpt-4o",
+  inputMode: "ai_sdk",
+  aiSdkMessages: modelMessages,
+});
+
+const uiMessages: UIMessage[] = [
+  {
+    id: "1",
+    role: "user",
+    parts: [{ type: "text", text: "Hi from UIMessage" }],
+  },
+];
+
+await countTokens({
+  provider: "google",
+  model: "gemini-2.0-flash",
+  inputMode: "ai_sdk",
+  uiMessages,
+});
+```
+
 ## Provider Inputs
 
 ### OpenAI
@@ -107,10 +141,13 @@ Default: `provider`.
   - Anthropic: `messages`
   - Google: `contents`
 - `text`: expects `input: string` and TokenKit converts it internally to native provider payload.
+- `ai_sdk`: expects `aiSdkMessages: ModelMessage[]` or `uiMessages: UIMessage[]` and TokenKit converts them to native provider payload.
 
 Validation is fail-fast:
 - In `text` mode, `input` is required and must be non-empty.
 - In `provider` mode, `input` is rejected for Anthropic and Google.
+- In `ai_sdk` mode, model support is strict: the model must exist in TokenKit catalog and be supported by AI SDK for that provider.
+- In `ai_sdk` mode (v1), non-text media parts are ignored for counting; text and tool parts are counted.
 
 ## `countAssistantTools`
 

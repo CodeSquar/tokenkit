@@ -2,6 +2,7 @@ export type Provider = "openai" | "anthropic" | "google";
 import type { ResponseInput } from "openai/resources/responses/responses";
 import type { Content } from "@google/genai";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
+import type { ModelMessage, UIMessage } from "ai";
 
 export type CountMode = "auto" | "endpoint" | "local";
 
@@ -15,7 +16,7 @@ export type LocalStrategy =
   | "tiktoken"
   | "anthropic_tokenizer"
   | "heuristic";
-export type InputMode = "provider" | "text";
+export type InputMode = "provider" | "text" | "ai_sdk";
 
 interface BaseCountTokensOptions {
   model: string;
@@ -27,13 +28,17 @@ interface BaseCountTokensOptions {
 
 export interface OpenAICountTokensOptions extends BaseCountTokensOptions {
   provider: "openai";
-  input: string | ResponseInput;
+  input?: string | ResponseInput;
+  aiSdkMessages?: ModelMessage[];
+  uiMessages?: UIMessage[];
 }
 
 export interface AnthropicCountTokensOptions extends BaseCountTokensOptions {
   provider: "anthropic";
   input?: string;
   messages?: MessageParam[];
+  aiSdkMessages?: ModelMessage[];
+  uiMessages?: UIMessage[];
   system?: string;
 }
 
@@ -41,6 +46,8 @@ export interface GoogleCountTokensOptions extends BaseCountTokensOptions {
   provider: "google";
   input?: string;
   contents?: Content[];
+  aiSdkMessages?: ModelMessage[];
+  uiMessages?: UIMessage[];
   systemInstruction?: Content;
 }
 

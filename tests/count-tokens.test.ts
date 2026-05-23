@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { countTokens } from "../src/count-tokens.js";
 import { estimateTokens } from "../src/estimate-tokens.js";
 import { ValidationError } from "../src/errors/index.js";
+import type { ModelMessage } from "ai";
 
 describe("countTokens", () => {
   afterEach(() => {
@@ -177,5 +178,72 @@ describe("countTokens", () => {
 
     expect(omitted.tokens).toBe(explicitTrue.tokens);
     expect(explicitFalse.tokens).toBeLessThan(explicitTrue.tokens);
+  });
+
+  it("accepts ai_sdk model messages for openai", async () => {
+    const aiSdkMessages: ModelMessage[] = [
+      { role: "system", content: "You are concise." },
+      { role: "user", content: [{ type: "text", text: "Hello AI SDK" }] },
+    ];
+
+    const result = await countTokens({
+      provider: "openai",
+      model: "gpt-4o",
+      inputMode: "ai_sdk",
+      aiSdkMessages,
+      mode: "local",
+    });
+
+    expect(result.tokens).toBeGreaterThan(0);
+  });
+
+  it("accepts ai_sdk model messages for anthropic", async () => {
+    const aiSdkMessages: ModelMessage[] = [
+      { role: "user", content: "Hello from AI SDK" },
+      {
+        role: "assistant",
+        content: [{ type: "tool-call", toolCallId: "call_1", toolName: "search", input: { q: "a" } }],
+      },
+    ];
+
+    const result = await countTokens({
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      inputMode: "ai_sdk",
+      aiSdkMessages,
+      mode: "local",
+    });
+
+    expect(result.tokens).toBeGreaterThan(0);
+  });
+
+  it("accepts ai_sdk model messages for google", async () => {
+    const aiSdkMessages: ModelMessage[] = [
+      { role: "user", content: [{ type: "text", text: "Hello gemini" }, { type: "image", image: new URL("https://example.com/x.png") }] },
+    ];
+
+    const result = await countTokens({
+      provider: "google",
+      model: "gemini-2.0-flash",
+      inputMode: "ai_sdk",
+      aiSdkMessages,
+      mode: "local",
+    });
+
+    expect(result.tokens).toBeGreaterThan(0);
+  });
+
+  it("rejects ai_sdk mode when model is outside the allowed intersection", async () => {
+    const aiSdkMessages: ModelMessage[] = [{ role: "user", content: "hi" }];
+
+    await expect(
+      countTokens({
+        provider: "google",
+        model: "gemini-unknown-x",
+        inputMode: "ai_sdk",
+        aiSdkMessages,
+        mode: "local",
+      }),
+    ).rejects.toThrow(ValidationError);
   });
 });

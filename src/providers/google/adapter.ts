@@ -35,11 +35,15 @@ export const googleAdapter: ProviderAdapter = {
       input.payload as Content[],
       input.countAssistantTools,
     );
-    const body: Record<string, unknown> = { contents };
-
-    if (input.system) {
-      body.systemInstruction = input.system;
-    }
+    const body: Record<string, unknown> = input.system
+      ? {
+          generateContentRequest: {
+            model: `models/${input.model}`,
+            contents,
+            systemInstruction: input.system,
+          },
+        }
+      : { contents };
 
     const response = await providerFetch<GeminiCountTokensResponse>({
       url,
