@@ -21,6 +21,7 @@ describe("openai adapter", () => {
     const result = await countTokens({
       provider: "openai",
       model: "gpt-4o",
+      inputMode: "text",
       input: "Hello",
       mode: "endpoint",
       apiKey: "test-key",

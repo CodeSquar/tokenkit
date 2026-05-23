@@ -18,6 +18,7 @@ import { countTokens, estimateTokens } from "tokenkit";
 const result = await countTokens({
   provider: "openai",
   model: "gpt-5.5",
+  inputMode: "provider",
   input: [
     { role: "user", content: "Hello" },
     {
@@ -45,7 +46,15 @@ console.log(result.price);
 await countTokens({
   provider: "openai",
   model: "gpt-5.5",
-  input: "Hello world", // or ResponseInput
+  inputMode: "text",
+  input: "Hello world",
+});
+
+await countTokens({
+  provider: "openai",
+  model: "gpt-5.5",
+  inputMode: "provider",
+  input: [{ role: "user", content: "Hello world" }], // ResponseInput
 });
 ```
 
@@ -55,6 +64,15 @@ await countTokens({
 await countTokens({
   provider: "anthropic",
   model: "claude-sonnet-4-6",
+  inputMode: "text",
+  input: "Hello",
+  system: "Be concise",
+});
+
+await countTokens({
+  provider: "anthropic",
+  model: "claude-sonnet-4-6",
+  inputMode: "provider",
   messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
   system: "Be concise",
 });
@@ -66,9 +84,31 @@ await countTokens({
 await countTokens({
   provider: "google",
   model: "gemini-3.5-flash",
+  inputMode: "text",
+  input: "Hello",
+});
+
+await countTokens({
+  provider: "google",
+  model: "gemini-3.5-flash",
+  inputMode: "provider",
   contents: [{ role: "user", parts: [{ text: "Hello" }] }],
 });
 ```
+
+## `inputMode`
+
+Default: `provider`.
+
+- `provider`: expects native provider payload:
+  - OpenAI: `input` (`string | ResponseInput`)
+  - Anthropic: `messages`
+  - Google: `contents`
+- `text`: expects `input: string` and TokenKit converts it internally to native provider payload.
+
+Validation is fail-fast:
+- In `text` mode, `input` is required and must be non-empty.
+- In `provider` mode, `input` is rejected for Anthropic and Google.
 
 ## `countAssistantTools`
 

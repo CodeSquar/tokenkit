@@ -1,4 +1,4 @@
-﻿import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { countTokens } from "../src/count-tokens.js";
 import { estimateTokens } from "../src/estimate-tokens.js";
 import { ValidationError } from "../src/errors/index.js";
@@ -14,6 +14,65 @@ describe("countTokens", () => {
         provider: "openai",
         model: "gpt-4o",
         input: "",
+      }),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("accepts text mode for anthropic", async () => {
+    const result = await countTokens({
+      provider: "anthropic",
+      model: "claude-sonnet-4-20250514",
+      inputMode: "text",
+      input: "Hello from text mode",
+      mode: "local",
+    });
+
+    expect(result.tokens).toBeGreaterThan(0);
+  });
+
+  it("accepts text mode for google", async () => {
+    const result = await countTokens({
+      provider: "google",
+      model: "gemini-2.0-flash",
+      inputMode: "text",
+      input: "Hello from text mode",
+      mode: "local",
+    });
+
+    expect(result.tokens).toBeGreaterThan(0);
+  });
+
+  it("throws in text mode when input is missing", async () => {
+    await expect(
+      countTokens({
+        provider: "google",
+        model: "gemini-2.0-flash",
+        inputMode: "text",
+        mode: "local",
+      }),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("throws when mixing input with provider mode for google", async () => {
+    await expect(
+      countTokens({
+        provider: "google",
+        model: "gemini-2.0-flash",
+        inputMode: "provider",
+        input: "invalid",
+        contents: [{ role: "user", parts: [{ text: "Hello" }] }],
+        mode: "local",
+      }),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("throws when provider mode payload is missing", async () => {
+    await expect(
+      countTokens({
+        provider: "anthropic",
+        model: "claude-sonnet-4-20250514",
+        inputMode: "provider",
+        mode: "local",
       }),
     ).rejects.toThrow(ValidationError);
   });

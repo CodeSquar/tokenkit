@@ -15,9 +15,12 @@ export type LocalStrategy =
   | "tiktoken"
   | "anthropic_tokenizer"
   | "heuristic";
+export type InputMode = "provider" | "text";
+
 interface BaseCountTokensOptions {
   model: string;
   mode?: CountMode;
+  inputMode?: InputMode;
   apiKey?: string;
   countAssistantTools?: boolean;
 }
@@ -29,13 +32,15 @@ export interface OpenAICountTokensOptions extends BaseCountTokensOptions {
 
 export interface AnthropicCountTokensOptions extends BaseCountTokensOptions {
   provider: "anthropic";
-  messages: MessageParam[];
+  input?: string;
+  messages?: MessageParam[];
   system?: string;
 }
 
 export interface GoogleCountTokensOptions extends BaseCountTokensOptions {
   provider: "google";
-  contents: Content[];
+  input?: string;
+  contents?: Content[];
   systemInstruction?: Content;
 }
 
@@ -44,7 +49,10 @@ export type CountTokensOptions =
   | AnthropicCountTokensOptions
   | GoogleCountTokensOptions;
 
-export type EstimateTokensOptions = Omit<CountTokensOptions, "mode">;
+export type EstimateTokensOptions =
+  | Omit<OpenAICountTokensOptions, "mode">
+  | Omit<AnthropicCountTokensOptions, "mode">
+  | Omit<GoogleCountTokensOptions, "mode">;
 
 export interface PriceEstimate {
   usd: number;

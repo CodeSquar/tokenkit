@@ -19,7 +19,8 @@ describe("anthropic adapter", () => {
     const result = await countTokens({
       provider: "anthropic",
       model: "claude-sonnet-4-20250514",
-      messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+      inputMode: "text",
+      input: "Hello",
       mode: "endpoint",
       apiKey: "test-key",
     });
