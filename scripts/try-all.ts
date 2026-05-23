@@ -1,5 +1,5 @@
-import dotenv from "dotenv";
-import { countTokens, type Message, type Provider } from "../src/index.js";
+﻿import dotenv from "dotenv";
+import { countTokens, type Provider } from "../src/index.js";
 
 dotenv.config();
 
@@ -7,77 +7,6 @@ const MODELS: Record<Provider, string> = {
   openai: "gpt-5.5",
   anthropic: "claude-opus-4-7",
   google: "gemini-3-flash-preview",
-};
-
-const INPUTS: Record<Provider, Message[]> = {
-  openai: [
-    {
-      role: "assistant",
-      parts: [
-        { type: "text", text: "I'll call a tool to fetch weather." },
-        {
-          type: "tool_call",
-          id: "call_1",
-          name: "get_weather",
-          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
-        },
-        {
-          type: "tool_output",
-          callId: "call_1",
-          output: "{\"temp\":20,\"condition\":\"clear\"}",
-        },
-      ],
-    },
-    { role: "user", content: "Thanks. And now Madrid?" },
-  ],
-  anthropic: [
-    {
-      role: "assistant",
-      parts: [
-        { type: "text", text: "I'll call a tool to fetch weather." },
-        {
-          type: "tool_call",
-          id: "toolu_1",
-          name: "get_weather",
-          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
-        },
-      ],
-    },
-    {
-      role: "user",
-      parts: [
-        {
-          type: "tool_output",
-          callId: "toolu_1",
-          output: "{\"temp\":20,\"condition\":\"clear\"}",
-        },
-      ],
-    },
-  ],
-  google: [
-    {
-      role: "assistant",
-      parts: [
-        { type: "text", text: "I'll call a tool to fetch weather." },
-        {
-          type: "tool_call",
-          id: "call_1",
-          name: "get_weather",
-          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
-        },
-      ],
-    },
-    {
-      role: "user",
-      parts: [
-        {
-          type: "tool_output",
-          callId: "call_1",
-          output: "{\"temp\":20,\"condition\":\"clear\"}",
-        },
-      ],
-    },
-  ],
 };
 
 type Row = {
@@ -126,6 +55,89 @@ function printSummary(rows: Row[]) {
   }
 }
 
+function getInput(provider: Provider) {
+  if (provider === "openai") {
+    return {
+      input: [
+        { role: "assistant" as const, content: "I'll call a tool to fetch weather." },
+        {
+          type: "function_call" as const,
+          call_id: "call_1",
+          name: "get_weather",
+          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
+        },
+        {
+          type: "function_call_output" as const,
+          call_id: "call_1",
+          output: "{\"temp\":20,\"condition\":\"clear\"}",
+        },
+        { role: "user" as const, content: "Thanks. And now Madrid?" },
+      ],
+    };
+  }
+
+  if (provider === "anthropic") {
+    return {
+      messages: [
+        {
+          role: "assistant" as const,
+          content: [
+            { type: "text" as const, text: "I'll call a tool to fetch weather." },
+            {
+              type: "tool_use" as const,
+              id: "toolu_1",
+              name: "get_weather",
+              input: { city: "Paris", units: "celsius" },
+            },
+          ],
+        },
+        {
+          role: "user" as const,
+          content: [
+            {
+              type: "tool_result" as const,
+              tool_use_id: "toolu_1",
+              content: "{\"temp\":20,\"condition\":\"clear\"}",
+            },
+            { type: "text" as const, text: "Thanks. And now Madrid?" },
+          ],
+        },
+      ],
+    };
+  }
+
+  return {
+    contents: [
+      {
+        role: "model" as const,
+        parts: [
+          { text: "I'll call a tool to fetch weather." },
+          {
+            functionCall: {
+              id: "call_1",
+              name: "get_weather",
+              args: { city: "Paris", units: "celsius" },
+            },
+          },
+        ],
+      },
+      {
+        role: "user" as const,
+        parts: [
+          {
+            functionResponse: {
+              id: "call_1",
+              name: "get_weather",
+              response: { output: { temp: 20, condition: "clear" } },
+            },
+          },
+          { text: "Thanks. And now Madrid?" },
+        ],
+      },
+    ],
+  };
+}
+
 async function runCase(
   provider: Provider,
   mode: "endpoint" | "local",
@@ -135,10 +147,10 @@ async function runCase(
     const result = await countTokens({
       provider,
       model: MODELS[provider],
-      messages: INPUTS[provider],
       mode,
       countAssistantTools: tools === "on",
-    });
+      ...getInput(provider),
+    } as never);
 
     return {
       provider,

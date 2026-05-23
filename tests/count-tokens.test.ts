@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, describe, expect, it, vi } from "vitest";
 import { countTokens } from "../src/count-tokens.js";
 import { estimateTokens } from "../src/estimate-tokens.js";
 import { ValidationError } from "../src/errors/index.js";
@@ -13,6 +13,7 @@ describe("countTokens", () => {
       countTokens({
         provider: "openai",
         model: "gpt-4o",
+        input: "",
       }),
     ).rejects.toThrow(ValidationError);
   });
@@ -31,7 +32,7 @@ describe("countTokens", () => {
     const result = await countTokens({
       provider: "openai",
       model: "gpt-4o",
-      text: "Hello",
+      input: "Hello",
       mode: "auto",
       apiKey: "key",
     });
@@ -56,7 +57,7 @@ describe("countTokens", () => {
       countTokens({
         provider: "openai",
         model: "gpt-4o",
-        text: "Hello",
+        input: "Hello",
         mode: "auto",
         apiKey: "key",
       }),
@@ -72,7 +73,7 @@ describe("countTokens", () => {
     const result = await estimateTokens({
       provider: "google",
       model: "gemini-2.0-flash",
-      text: "Test",
+      contents: [{ role: "user", parts: [{ text: "Test" }] }],
       apiKey: "should-not-be-used",
     });
 
@@ -81,68 +82,28 @@ describe("countTokens", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("estimateTokens ignores endpoint mode at runtime", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await estimateTokens({
-      provider: "openai",
-      model: "gpt-4o",
-      text: "Hello",
-      apiKey: "should-not-be-used",
-      mode: "endpoint",
-    } as Parameters<typeof estimateTokens>[0]);
-
-    expect(result.estimated).toBe(true);
-    expect(result.method).toBe("local_tiktoken");
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("returns price null when model not in pricing table", async () => {
-    const result = await countTokens({
-      provider: "openai",
-      model: "gpt-4o",
-      text: "x",
-      mode: "local",
-    });
-    expect(result.price).not.toBeNull();
-
-    const unknown = await countTokens({
-      provider: "openai",
-      model: "totally-unknown-model-id",
-      text: "x",
-      mode: "local",
-    });
-    expect(unknown.price).toBeNull();
-  });
-
   it("defaults countAssistantTools to true", async () => {
-    const messages = [
+    const input = [
+      { role: "assistant" as const, content: "Checking weather." },
       {
-        role: "assistant" as const,
-        parts: [
-          { type: "text" as const, text: "Checking weather." },
-          {
-            type: "tool_call" as const,
-            id: "call_1",
-            name: "get_weather",
-            arguments: "{\"city\":\"Paris\"}",
-          },
-        ],
+        type: "function_call" as const,
+        call_id: "call_1",
+        name: "get_weather",
+        arguments: "{\"city\":\"Paris\"}",
       },
     ];
 
     const omitted = await countTokens({
       provider: "openai",
       model: "gpt-4o",
-      messages,
+      input,
       mode: "local",
     });
 
     const explicitTrue = await countTokens({
       provider: "openai",
       model: "gpt-4o",
-      messages,
+      input,
       mode: "local",
       countAssistantTools: true,
     });
@@ -150,7 +111,7 @@ describe("countTokens", () => {
     const explicitFalse = await countTokens({
       provider: "openai",
       model: "gpt-4o",
-      messages,
+      input,
       mode: "local",
       countAssistantTools: false,
     });

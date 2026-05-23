@@ -1,10 +1,7 @@
-import { encoding_for_model } from "tiktoken";
+﻿import { encoding_for_model } from "tiktoken";
 import { resolveModelCatalog } from "../../models/resolve-model.js";
-import type { NormalizedInput } from "../../types/index.js";
-import { flattenMessages, stringifyMessageParts } from "../../utils/messages.js";
 
 const TOKENS_PER_MESSAGE = 3;
-const TOKENS_PER_NAME = 1;
 
 function resolveEncodingModel(model: string): string {
   const entry = resolveModelCatalog("openai", model);
@@ -30,8 +27,8 @@ function isChatModel(model: string): boolean {
   return resolved.startsWith("gpt-");
 }
 
-export function countTiktoken(input: NormalizedInput): number {
-  const encodingModel = resolveEncodingModel(input.model);
+export function countTiktoken(model: string, text: string): number {
+  const encodingModel = resolveEncodingModel(model);
   let enc;
   try {
     enc = encoding_for_model(
@@ -42,40 +39,12 @@ export function countTiktoken(input: NormalizedInput): number {
   }
 
   try {
-    if (!isChatModel(input.model)) {
-      const text = flattenMessages(
-        input.messages.map((message) => ({
-          ...message,
-          content: stringifyMessageParts(message, {
-            includeTools: input.countAssistantTools,
-          }),
-        })),
-        input.system,
-      );
+    if (!isChatModel(model)) {
       return enc.encode(text).length;
     }
 
-    let tokens = 0;
-    if (input.system) {
-      tokens += TOKENS_PER_MESSAGE;
-      tokens += enc.encode(input.system).length;
-    }
-
-    for (const message of input.messages) {
-      tokens += TOKENS_PER_MESSAGE;
-      tokens += enc.encode(
-        stringifyMessageParts(message, {
-          includeTools: input.countAssistantTools,
-        }),
-      ).length;
-      if (message.name) {
-        tokens += enc.encode(message.name).length;
-        tokens += TOKENS_PER_NAME;
-      }
-    }
-
-    tokens += 3;
-    return tokens;
+    const lineCount = Math.max(1, text.split("\n").length);
+    return enc.encode(text).length + lineCount * TOKENS_PER_MESSAGE + 3;
   } finally {
     enc.free();
   }

@@ -1,7 +1,15 @@
-import type { LocalStrategy, Method, NormalizedInput } from "../types/index.js";
+import type { AnyNormalizedInput, LocalStrategy, Method } from "../types/index.js";
+import type { ResponseInput } from "openai/resources/responses/responses";
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
+import type { Content } from "@google/genai";
 import { countAnthropicLocal } from "./strategies/anthropic.js";
 import { countHeuristic } from "./strategies/heuristic.js";
 import { countTiktoken } from "./strategies/tiktoken.js";
+import {
+  anthropicMessagesToText,
+  googleContentsToText,
+  openAIInputToText,
+} from "../utils/native.js";
 
 export function getMethodForStrategy(strategy: LocalStrategy): Method {
   switch (strategy) {
@@ -16,17 +24,29 @@ export function getMethodForStrategy(strategy: LocalStrategy): Method {
 
 export function runLocal(
   strategy: LocalStrategy,
-  input: NormalizedInput,
+  input: AnyNormalizedInput,
 ): number {
+  const text =
+    input.provider === "openai"
+      ? openAIInputToText(input.payload as string | ResponseInput, input.countAssistantTools)
+      : input.provider === "anthropic"
+        ? anthropicMessagesToText(
+            input.payload as MessageParam[],
+            typeof input.system === "string" ? input.system : undefined,
+            input.countAssistantTools,
+          )
+        : googleContentsToText(
+            input.payload as Content[],
+            input.system as Content | undefined,
+            input.countAssistantTools,
+          );
+
   switch (strategy) {
     case "tiktoken":
-      return countTiktoken(input);
+      return countTiktoken(input.model, text);
     case "anthropic_tokenizer":
-      return countAnthropicLocal(input);
+      return countAnthropicLocal(text);
     case "heuristic":
-      return countHeuristic({
-        messages: input.messages,
-        system: input.system,
-      });
+      return countHeuristic({ text });
   }
 }

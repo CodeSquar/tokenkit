@@ -8,15 +8,19 @@ export type {
   CountMode,
   Method,
   LocalStrategy,
-  Message,
-  MessageRole,
+  OpenAICountTokensOptions,
+  AnthropicCountTokensOptions,
+  GoogleCountTokensOptions,
   CountTokensOptions,
   EstimateTokensOptions,
   CountTokensResult,
   PriceEstimate,
   CalculatePriceOptions,
   HeuristicInput,
-  NormalizedInput,
+  AnyNormalizedInput,
+  OpenAINormalizedInput,
+  AnthropicNormalizedInput,
+  GoogleNormalizedInput,
 } from "./types/index.js";
 
 export {

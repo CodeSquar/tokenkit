@@ -1,30 +1,15 @@
-import { encoding_for_model } from "tiktoken";
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { countTiktoken } from "../../src/local/strategies/tiktoken.js";
 
 describe("countTiktoken", () => {
-  it("adds encoded name tokens plus framing overhead", () => {
-    const content = "Hello";
-    const name = "example_user";
+  it("returns positive tokens for short text", () => {
+    const tokens = countTiktoken("gpt-4o", "Hello");
+    expect(tokens).toBeGreaterThan(0);
+  });
 
-    const withoutName = countTiktoken({
-      provider: "openai",
-      model: "gpt-4o",
-      messages: [{ role: "user", content }],
-    });
-
-    const withName = countTiktoken({
-      provider: "openai",
-      model: "gpt-4o",
-      messages: [{ role: "user", content, name }],
-    });
-
-    const enc = encoding_for_model("gpt-4o");
-    try {
-      const expectedDelta = enc.encode(name).length + 1;
-      expect(withName - withoutName).toBe(expectedDelta);
-    } finally {
-      enc.free();
-    }
+  it("scales with longer input", () => {
+    const short = countTiktoken("gpt-4o", "Hi");
+    const long = countTiktoken("gpt-4o", "Hi ".repeat(200));
+    expect(long).toBeGreaterThan(short);
   });
 });

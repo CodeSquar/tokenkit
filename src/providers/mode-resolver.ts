@@ -1,5 +1,5 @@
 import { MissingApiKeyError } from "../errors/index.js";
-import type { CountMode, Method, NormalizedInput } from "../types/index.js";
+import type { AnyNormalizedInput, CountMode, Method } from "../types/index.js";
 import { isRetryableEndpointError } from "../utils/fetch.js";
 import type { ProviderAdapter } from "./base.js";
 
@@ -11,7 +11,7 @@ export interface CountExecution {
 
 export async function executeCount(
   adapter: ProviderAdapter,
-  input: NormalizedInput,
+  input: AnyNormalizedInput,
   mode: CountMode,
 ): Promise<CountExecution> {
   if (mode === "local") {

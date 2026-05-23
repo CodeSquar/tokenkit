@@ -1,4 +1,7 @@
 export type Provider = "openai" | "anthropic" | "google";
+import type { ResponseInput } from "openai/resources/responses/responses";
+import type { Content } from "@google/genai";
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
 
 export type CountMode = "auto" | "endpoint" | "local";
 
@@ -12,46 +15,34 @@ export type LocalStrategy =
   | "tiktoken"
   | "anthropic_tokenizer"
   | "heuristic";
-
-export type MessageRole = "user" | "assistant" | "system";
-
-export type TextPart = {
-  type: "text";
-  text: string;
-};
-
-export type ToolCallPart = {
-  type: "tool_call";
-  id?: string;
-  name: string;
-  arguments: string;
-};
-
-export type ToolOutputPart = {
-  type: "tool_output";
-  callId: string;
-  output: string;
-};
-
-export type MessagePart = TextPart | ToolCallPart | ToolOutputPart;
-
-export interface Message {
-  role: MessageRole;
-  content?: string;
-  parts?: MessagePart[];
-  name?: string;
-}
-
-export interface CountTokensOptions {
-  provider: Provider;
+interface BaseCountTokensOptions {
   model: string;
-  messages?: Message[];
-  text?: string;
   mode?: CountMode;
   apiKey?: string;
-  system?: string;
   countAssistantTools?: boolean;
 }
+
+export interface OpenAICountTokensOptions extends BaseCountTokensOptions {
+  provider: "openai";
+  input: string | ResponseInput;
+}
+
+export interface AnthropicCountTokensOptions extends BaseCountTokensOptions {
+  provider: "anthropic";
+  messages: MessageParam[];
+  system?: string;
+}
+
+export interface GoogleCountTokensOptions extends BaseCountTokensOptions {
+  provider: "google";
+  contents: Content[];
+  systemInstruction?: Content;
+}
+
+export type CountTokensOptions =
+  | OpenAICountTokensOptions
+  | AnthropicCountTokensOptions
+  | GoogleCountTokensOptions;
 
 export type EstimateTokensOptions = Omit<CountTokensOptions, "mode">;
 
@@ -69,13 +60,33 @@ export interface CountTokensResult {
 }
 
 export interface NormalizedInput {
-  provider: Provider;
+  provider: CountTokensOptions["provider"];
   model: string;
-  messages: Message[];
-  system?: string;
   apiKey?: string;
   countAssistantTools: boolean;
 }
+
+export interface OpenAINormalizedInput extends NormalizedInput {
+  provider: "openai";
+  payload: string | ResponseInput;
+}
+
+export interface AnthropicNormalizedInput extends NormalizedInput {
+  provider: "anthropic";
+  payload: MessageParam[];
+  system?: string;
+}
+
+export interface GoogleNormalizedInput extends NormalizedInput {
+  provider: "google";
+  payload: Content[];
+  system?: Content;
+}
+
+export type AnyNormalizedInput =
+  | OpenAINormalizedInput
+  | AnthropicNormalizedInput
+  | GoogleNormalizedInput;
 
 export interface CalculatePriceOptions {
   provider: Provider;
@@ -84,8 +95,6 @@ export interface CalculatePriceOptions {
 }
 
 export interface HeuristicInput {
-  messages?: Message[];
-  text?: string;
-  system?: string;
+  text: string;
   countAssistantTools?: boolean;
 }

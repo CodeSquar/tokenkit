@@ -1,8 +1,8 @@
-# TokenKit
+﻿# TokenKit
 
-Count prompt tokens (and a rough USD cost) for OpenAI, Anthropic, and Gemini before you call the API.
+Counts input tokens and estimates cost (USD) for OpenAI, Anthropic, and Google.
 
-With an API key it uses each provider's official count endpoint. Without one, or if the call fails, it falls back to local tokenizers or a simple chars/4 heuristic.
+Uses the provider's official endpoint when available (`mode: "endpoint"` or `"auto"` with an API key). Otherwise, it uses local strategies (`mode: "local"`).
 
 ## Install
 
@@ -16,38 +16,80 @@ npm install tokenkit
 import { countTokens, estimateTokens } from "tokenkit";
 
 const result = await countTokens({
-  provider: "anthropic",
-  model: "claude-sonnet-4-20250514",
-  messages: [{ role: "user", content: "Hello world" }],
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  countAssistantTools: true, // default; includes tool calls + tool outputs in assistant turns
+  provider: "openai",
+  model: "gpt-4o",
+  input: [
+    { role: "user", content: "Hello" },
+    {
+      type: "function_call",
+      call_id: "call_1",
+      name: "get_weather",
+      arguments: "{\"city\":\"Paris\"}",
+    },
+  ],
+  apiKey: process.env.OPENAI_API_KEY,
+  countAssistantTools: true,
 });
 
-console.log(result.tokens);    // e.g. 14
-console.log(result.estimated); // false when the provider API answered
-console.log(result.price);     // { usd: 0.000042 } or null if the model is not in the pricing table
+console.log(result.tokens);
+console.log(result.estimated);
+console.log(result.method);
+console.log(result.price);
 ```
 
-Local only (no network):
+## Provider Inputs
+
+### OpenAI
 
 ```ts
-const estimate = await estimateTokens({
+await countTokens({
+  provider: "openai",
+  model: "gpt-4o",
+  input: "Hello world", // or ResponseInput
+});
+```
+
+### Anthropic
+
+```ts
+await countTokens({
+  provider: "anthropic",
+  model: "claude-sonnet-4-20250514",
+  messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+  system: "Be concise",
+});
+```
+
+### Google (Gemini)
+
+```ts
+await countTokens({
   provider: "google",
   model: "gemini-2.0-flash",
-  text: "Hello world",
+  contents: [{ role: "user", parts: [{ text: "Hello" }] }],
 });
-// same as countTokens({ ..., mode: "local" })
 ```
+
+## `countAssistantTools`
+
+Default: `true`.
+
+When set to `false`, tool blocks are excluded from the count:
+- OpenAI: `function_call`, `function_call_output`
+- Anthropic: `tool_use`, `tool_result`
+- Google: `functionCall`, `functionResponse`
 
 ## Modes
 
-- `auto` (default): provider endpoint when a key is available, local fallback on failure
-- `endpoint`: provider count API only (requires a key)
+- `auto` (default): tries the endpoint and falls back to local if a recoverable error occurs
+- `endpoint`: uses only the provider endpoint
 - `local`: no network
 
-## API keys
+`estimateTokens(options)` is equivalent to `countTokens({ ...options, mode: "local" })`.
 
-From env vars or pass `apiKey` in the options object.
+## API Keys
+
+Can be passed via `apiKey` or environment variables:
 
 | Provider | Env var |
 |----------|---------|
@@ -55,62 +97,39 @@ From env vars or pass `apiKey` in the options object.
 | Anthropic | `ANTHROPIC_API_KEY` |
 | Google | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
 
-## Response
+## Response Shape
 
 ```ts
 {
-  provider: "anthropic",
-  model: "claude-sonnet-4-20250514",
-  tokens: 14,
-  estimated: false,
-  method: "provider_endpoint", // or "tiktoken", "anthropic_tokenizer", "heuristic"
-  price: { usd: 0.000042 }     // null when the model is missing from pricing data
+  provider: "openai" | "anthropic" | "google",
+  model: string,
+  tokens: number,
+  estimated: boolean,
+  method: "provider_endpoint" | "local_tiktoken" | "local_anthropic" | "local_heuristic",
+  price: { usd: number } | null
 }
 ```
 
-## Local fallbacks
+## Local Strategies
 
-| Provider | Strategy |
-|----------|----------|
-| OpenAI | `tiktoken` |
-| Anthropic | `@anthropic-ai/tokenizer` (approximate for Claude 3+) |
-| Google | chars/4 heuristic |
+- OpenAI: `tiktoken`
+- Anthropic: `@anthropic-ai/tokenizer`
+- Google: chars/4 heuristic
 
-`countHeuristic()` is exported if you want the heuristic without the provider plumbing.
+Also exports `countHeuristic({ text })`.
 
-## API
-
-- `countTokens(options)` - count + optional price
-- `estimateTokens(options)` - shorthand for `mode: "local"`
-- `calculatePrice({ provider, model, tokens })` - prompt cost only
-- `countHeuristic({ messages?, text?, system? })`
-
-## Tests
-
-Integration tests hit real count endpoints (frontier models). They skip when a provider key is missing.
+## Scripts
 
 ```bash
-cp .env.example .env
+npm test
 npm run test:integration
-```
-
-Unit tests stay mocked: `npm test`
-
-## Quick try (OpenAI)
-
-Smoke script against `gpt-5.5` (endpoint, auto, local, pricing, heuristic):
-
-```bash
-cp .env.example .env
-# add OPENAI_API_KEY, then:
+npm run try:all
 npm run try:openai
 ```
 
-## Limits (MVP)
+## Notes
 
-- Input/prompt tokens only, no output counting
-- Text-first messages with optional tool parts (`tool_call`, `tool_output`)
-- Gemini via AI Studio, not Vertex AI
-- Heuristic counts are approximate (~25% off on typical prose)
+- Counts input tokens (prompt/input), not output tokens.
+- `price` is `null` if the model is not in the pricing table.
 
-See [count-endpoint.md](./count-endpoint.md) for the provider count endpoints this wraps.
+For more endpoint details: [count-endpoint.md](./count-endpoint.md)
