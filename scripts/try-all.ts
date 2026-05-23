@@ -13,7 +13,7 @@ const MODELS: Record<Provider, string> = {
 const AI_SDK_MODELS: Record<Provider, string> = {
   openai: "gpt-5.5",
   anthropic: "claude-opus-4-7",
-  google: "gemini-3-flash",
+  google: "gemini-3-flash-preview",
 };
 
 type Row = {
