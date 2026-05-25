@@ -26,8 +26,7 @@ describe("import safety", () => {
     const result = await countTokens({
       provider: "openai",
       model: "gpt-4o",
-      inputMode: "text",
-      input: "Hello",
+      content: "Hello",
       mode: "endpoint",
       apiKey: "test-key",
     });
@@ -49,8 +48,7 @@ describe("import safety", () => {
       countTokens({
         provider: "anthropic",
         model: "claude-sonnet-4-20250514",
-        inputMode: "text",
-        input: "Hello",
+        content: "Hello",
         mode: "local",
       }),
     ).rejects.toThrow(LocalTokenizerUnavailableError);

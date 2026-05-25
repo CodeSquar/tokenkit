@@ -50,7 +50,7 @@ async function main() {
       await countTokens({
         provider: "openai",
         model: MODEL,
-        input: BASIC_INPUT,
+        content: BASIC_INPUT,
         mode: "endpoint",
       }),
     );
@@ -61,7 +61,7 @@ async function main() {
     await countTokens({
       provider: "openai",
       model: MODEL,
-      input: BASIC_INPUT,
+      content: BASIC_INPUT,
       mode: "auto",
     }),
   );
@@ -71,7 +71,7 @@ async function main() {
     await countTokens({
       provider: "openai",
       model: MODEL,
-      input: BASIC_INPUT,
+      content: BASIC_INPUT,
       mode: "local",
     }),
   );
@@ -81,7 +81,7 @@ async function main() {
     await estimateTokens({
       provider: "openai",
       model: MODEL,
-      input: BASIC_INPUT,
+      content: BASIC_INPUT,
     }),
   );
 
@@ -90,7 +90,7 @@ async function main() {
     await countTokens({
       provider: "openai",
       model: MODEL,
-      input: OPENAI_FULL_INPUT,
+      content: OPENAI_FULL_INPUT,
       mode: "local",
       countAssistantTools: true,
     }),
@@ -101,7 +101,7 @@ async function main() {
     await countTokens({
       provider: "openai",
       model: MODEL,
-      input: OPENAI_FULL_INPUT,
+      content: OPENAI_FULL_INPUT,
       mode: "local",
       countAssistantTools: false,
     }),
@@ -111,7 +111,7 @@ async function main() {
     const endpointFullInput = await countTokens({
       provider: "openai",
       model: MODEL,
-      input: OPENAI_FULL_INPUT,
+      content: OPENAI_FULL_INPUT,
       mode: "endpoint",
       countAssistantTools: true,
     });

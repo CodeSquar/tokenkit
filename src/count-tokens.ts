@@ -1,4 +1,5 @@
 import { calculatePrice } from "./calculate-price.js";
+import { inferContentKind } from "./content/infer.js";
 import { ValidationError } from "./errors/index.js";
 import { getAdapter } from "./providers/registry.js";
 import { executeCount } from "./providers/mode-resolver.js";
@@ -9,6 +10,7 @@ import type {
 } from "./types/index.js";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
 import type { Content } from "@google/genai";
+import type { ResponseInput } from "openai/resources/responses/responses";
 import { resolveApiKey } from "./utils/env.js";
 import type { ModelMessage, UIMessage } from "ai";
 import { resolveModelCatalog } from "./models/resolve-model.js";
@@ -36,148 +38,129 @@ function ensureArray(value: unknown, path: string): unknown[] {
   return value;
 }
 
-function ensureOnlyPaths(
-  options: object,
-  paths: string[],
-): void {
-  const allowed = new Set(paths);
-  const raw = options as Record<string, unknown>;
-  for (const path of Object.keys(raw)) {
-    if (raw[path] === undefined) continue;
-    if (!allowed.has(path)) {
-      invalid(path, "is not allowed for the selected inputMode");
-    }
-  }
+function googleSystemFromString(system: string): Content {
+  return { role: "system", parts: [{ text: system }] };
 }
 
-function normalizeTextMode(options: CountTokensOptions): AnyNormalizedInput {
+function normalizeTextContent(
+  options: CountTokensOptions,
+  text: string,
+): AnyNormalizedInput {
   const model = ensureNonEmptyString(options.model, "model");
-  const input = ensureNonEmptyString((options as { input?: unknown }).input, "input");
+  const value = ensureNonEmptyString(text, "content");
   const countAssistantTools = options.countAssistantTools ?? true;
   const apiKey = resolveApiKey(options.provider, options.apiKey);
 
   if (options.provider === "openai") {
-    ensureOnlyPaths(options, [
-      "provider",
-      "model",
-      "mode",
-      "inputMode",
-      "input",
-      "apiKey",
-      "countAssistantTools",
-    ]);
+    if (options.system !== undefined) {
+      invalid("system", "is not allowed for OpenAI text content");
+    }
     return {
       provider: "openai",
       model,
-      payload: input,
+      payload: value,
       apiKey,
       countAssistantTools,
     };
   }
 
   if (options.provider === "anthropic") {
-    ensureOnlyPaths(options, [
-      "provider",
-      "model",
-      "mode",
-      "inputMode",
-      "input",
-      "apiKey",
-      "countAssistantTools",
-      "system",
-    ]);
-    return {
-      provider: "anthropic",
-      model,
-      payload: [{ role: "user", content: [{ type: "text", text: input }] }],
-      system: options.system,
-      apiKey,
-      countAssistantTools,
-    };
-  }
-
-  ensureOnlyPaths(options, [
-    "provider",
-    "model",
-    "mode",
-    "inputMode",
-    "input",
-    "apiKey",
-    "countAssistantTools",
-    "systemInstruction",
-  ]);
-  return {
-    provider: "google",
-    model,
-    payload: [{ role: "user", parts: [{ text: input }] }],
-    system: options.systemInstruction,
-    apiKey,
-    countAssistantTools,
-  };
-}
-
-async function normalizeInput(options: CountTokensOptions): Promise<AnyNormalizedInput> {
-  const inputMode = options.inputMode ?? "provider";
-  if (inputMode !== "provider" && inputMode !== "text" && inputMode !== "ai_sdk") {
-    invalid("inputMode", "must be \"provider\", \"text\" or \"ai_sdk\"");
-  }
-  if (inputMode === "text") {
-    return normalizeTextMode(options);
-  }
-  if (inputMode === "ai_sdk") {
-    return normalizeAISdkMode(options);
-  }
-
-  const model = ensureNonEmptyString(options.model, "model");
-  const countAssistantTools = options.countAssistantTools ?? true;
-  const apiKey = resolveApiKey(options.provider, options.apiKey);
-
-  if (options.provider === "openai") {
-    if (options.input === undefined || options.input === null) {
-      invalid("input", "is required");
-    }
-    if (typeof options.input !== "string" && !Array.isArray(options.input)) {
-      invalid("input", "must be a string or ResponseInput");
-    }
-    if (typeof options.input === "string" && options.input.trim() === "") {
-      invalid("input", "must be a non-empty string when it is a string");
-    }
-    return {
-      provider: "openai",
-      model,
-      payload: options.input,
-      apiKey,
-      countAssistantTools,
-    };
-  }
-
-  if (options.provider === "anthropic") {
-    if ((options as { input?: unknown }).input !== undefined) {
-      invalid("input", "is not allowed when inputMode is \"provider\"");
-    }
-    const messages = ensureArray(options.messages, "messages") as MessageParam[];
-    if (messages.length === 0) {
-      invalid("messages", "must include at least one message");
-    }
     if (options.system !== undefined && typeof options.system !== "string") {
       invalid("system", "must be a string");
     }
     return {
       provider: "anthropic",
       model,
-      payload: messages,
+      payload: [{ role: "user", content: [{ type: "text", text: value }] }],
       system: options.system,
       apiKey,
       countAssistantTools,
     };
   }
 
-  if ((options as { input?: unknown }).input !== undefined) {
-    invalid("input", "is not allowed when inputMode is \"provider\"");
+  if (options.system !== undefined && typeof options.system !== "string") {
+    invalid("system", "must be a string");
   }
-  const contents = ensureArray(options.contents, "contents") as Content[];
+  return {
+    provider: "google",
+    model,
+    payload: [{ role: "user", parts: [{ text: value }] }],
+    system: options.system ? googleSystemFromString(options.system) : undefined,
+    apiKey,
+    countAssistantTools,
+  };
+}
+
+function normalizeOpenAINativeContent(
+  options: CountTokensOptions,
+  content: string | ResponseInput,
+): AnyNormalizedInput {
+  const model = ensureNonEmptyString(options.model, "model");
+  const countAssistantTools = options.countAssistantTools ?? true;
+  const apiKey = resolveApiKey(options.provider, options.apiKey);
+
+  if (typeof content === "string") {
+    if (content.trim() === "") {
+      invalid("content", "must be a non-empty string when it is a string");
+    }
+    return {
+      provider: "openai",
+      model,
+      payload: content,
+      apiKey,
+      countAssistantTools,
+    };
+  }
+
+  const input = ensureArray(content, "content") as ResponseInput;
+  if (input.length === 0) {
+    invalid("content", "must include at least one item");
+  }
+
+  return {
+    provider: "openai",
+    model,
+    payload: input,
+    apiKey,
+    countAssistantTools,
+  };
+}
+
+function normalizeAnthropicNativeContent(
+  options: CountTokensOptions,
+  messages: MessageParam[],
+): AnyNormalizedInput {
+  const model = ensureNonEmptyString(options.model, "model");
+  const countAssistantTools = options.countAssistantTools ?? true;
+  const apiKey = resolveApiKey(options.provider, options.apiKey);
+
+  if (messages.length === 0) {
+    invalid("content", "must include at least one message");
+  }
+  if (options.system !== undefined && typeof options.system !== "string") {
+    invalid("system", "must be a string");
+  }
+
+  return {
+    provider: "anthropic",
+    model,
+    payload: messages,
+    system: options.system,
+    apiKey,
+    countAssistantTools,
+  };
+}
+
+function normalizeGoogleNativeContent(
+  options: CountTokensOptions,
+  contents: Content[],
+): AnyNormalizedInput {
+  const model = ensureNonEmptyString(options.model, "model");
+  const countAssistantTools = options.countAssistantTools ?? true;
+  const apiKey = resolveApiKey(options.provider, options.apiKey);
+
   if (contents.length === 0) {
-    invalid("contents", "must include at least one content item");
+    invalid("content", "must include at least one content item");
   }
 
   return {
@@ -199,17 +182,6 @@ function ensureAiSdkModelAllowed(provider: CountTokensOptions["provider"], model
   }
 }
 
-function readAiSdkMessages(options: CountTokensOptions): {
-  messages?: ModelMessage[];
-  uiMessages?: UIMessage[];
-} {
-  const withAi = options as CountTokensOptions & {
-    aiSdkMessages?: ModelMessage[];
-    uiMessages?: UIMessage[];
-  };
-  return { messages: withAi.aiSdkMessages, uiMessages: withAi.uiMessages };
-}
-
 function isModuleNotFound(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const withCode = error as Error & { code?: string };
@@ -226,39 +198,26 @@ async function convertUiMessagesToModelMessages(
   } catch (error) {
     if (isModuleNotFound(error)) {
       invalid(
-        "uiMessages",
-        "requires the optional peer dependency \"ai\". Install it with: npm install ai",
+        "content",
+        "UIMessage[] requires the optional peer dependency \"ai\". Install it with: npm install ai",
       );
     }
     throw error;
   }
 }
 
-async function normalizeAISdkMode(options: CountTokensOptions): Promise<AnyNormalizedInput> {
+function normalizeMessagesFromModelMessages(
+  options: CountTokensOptions,
+  aiSdkMessages: ModelMessage[],
+): AnyNormalizedInput {
   const model = ensureNonEmptyString(options.model, "model");
   const countAssistantTools = options.countAssistantTools ?? true;
   const apiKey = resolveApiKey(options.provider, options.apiKey);
-  const { messages, uiMessages } = readAiSdkMessages(options);
 
   ensureAiSdkModelAllowed(options.provider, model);
 
-  if (messages !== undefined && uiMessages !== undefined) {
-    invalid("aiSdkMessages", "cannot be used together with uiMessages");
-  }
-
-  let aiSdkMessages: ModelMessage[];
-  if (Array.isArray(messages)) {
-    if (messages.length === 0) {
-      invalid("aiSdkMessages", "must include at least one message");
-    }
-    aiSdkMessages = messages;
-  } else if (Array.isArray(uiMessages)) {
-    if (uiMessages.length === 0) {
-      invalid("uiMessages", "must include at least one message");
-    }
-    aiSdkMessages = await convertUiMessagesToModelMessages(uiMessages);
-  } else {
-    invalid("aiSdkMessages", "is required when inputMode is \"ai_sdk\" (or pass uiMessages)");
+  if (aiSdkMessages.length === 0) {
+    invalid("content", "must include at least one message");
   }
 
   const normalized = normalizeAISDKMessages(aiSdkMessages);
@@ -289,17 +248,59 @@ async function normalizeAISdkMode(options: CountTokensOptions): Promise<AnyNorma
     model,
     payload: normalized.googleContents,
     system: normalized.system
-      ? { role: "system", parts: [{ text: normalized.system }] }
+      ? googleSystemFromString(normalized.system)
       : undefined,
     apiKey,
     countAssistantTools,
   };
 }
 
+async function normalizeFromContent(options: CountTokensOptions): Promise<AnyNormalizedInput> {
+  if (options.content === undefined || options.content === null) {
+    invalid("content", "is required");
+  }
+
+  if (typeof options.content !== "string" && !Array.isArray(options.content)) {
+    invalid("content", "must be a string or an array");
+  }
+
+  const kind = inferContentKind(options.content, options.provider);
+
+  switch (kind) {
+    case "text":
+      return normalizeTextContent(options, options.content as string);
+    case "openai-native":
+      if (options.provider !== "openai") {
+        invalid("content", `is not valid native payload for provider "${options.provider}"`);
+      }
+      return normalizeOpenAINativeContent(options, options.content as string | ResponseInput);
+    case "anthropic-native":
+      if (options.provider !== "anthropic") {
+        invalid("content", `is not valid native payload for provider "${options.provider}"`);
+      }
+      return normalizeAnthropicNativeContent(options, options.content as MessageParam[]);
+    case "google-native":
+      if (options.provider !== "google") {
+        invalid("content", `is not valid native payload for provider "${options.provider}"`);
+      }
+      return normalizeGoogleNativeContent(options, options.content as Content[]);
+    case "messages":
+      return normalizeMessagesFromModelMessages(options, options.content as ModelMessage[]);
+    case "ui": {
+      const uiMessages = ensureArray(options.content, "content") as UIMessage[];
+      if (uiMessages.length === 0) {
+        invalid("content", "must include at least one message");
+      }
+      const aiSdkMessages = await convertUiMessagesToModelMessages(uiMessages);
+      return normalizeMessagesFromModelMessages(options, aiSdkMessages);
+    }
+  }
+}
+
 export async function countTokens(
   options: CountTokensOptions,
 ): Promise<CountTokensResult> {
-  const input = await normalizeInput(options);
+  const input = await normalizeFromContent(options);
   const mode = options.mode ?? "auto";
   const adapter = getAdapter(options.provider);
   const execution = await executeCount(adapter, input, mode);

@@ -16,10 +16,12 @@ const AI_SDK_MODELS: Record<Provider, string> = {
   google: "gemini-3-flash-preview",
 };
 
+type ContentKind = "native" | "messages";
+
 type Row = {
   provider: Provider;
   mode: "endpoint" | "local";
-  inputMode: "provider" | "ai_sdk";
+  contentKind: ContentKind;
   tools: "on" | "off";
   ok: boolean;
   tokens?: number;
@@ -42,7 +44,7 @@ function fmt(value: unknown): string {
 
 function printSummary(rows: Row[]) {
   console.log(
-    "\nprovider   mode      inputMode  tools  ok   tokens   estimated  method              usd        error",
+    "\nprovider   mode      content    tools  ok   tokens   estimated  method              usd        error",
   );
   console.log(
     "---------  --------  ---------  -----  ---  -------  ---------  ------------------  ---------  ------------------------------",
@@ -51,7 +53,7 @@ function printSummary(rows: Row[]) {
     const line = [
       row.provider.padEnd(9),
       row.mode.padEnd(8),
-      row.inputMode.padEnd(9),
+      row.contentKind.padEnd(9),
       row.tools.padEnd(5),
       (row.ok ? "yes" : "no").padEnd(3),
       fmt(row.tokens).padEnd(7),
@@ -64,87 +66,81 @@ function printSummary(rows: Row[]) {
   }
 }
 
-function getInput(provider: Provider) {
+function getNativeContent(provider: Provider) {
   if (provider === "openai") {
-    return {
-      input: [
-        { role: "assistant" as const, content: "I'll call a tool to fetch weather." },
-        {
-          type: "function_call" as const,
-          call_id: "call_1",
-          name: "get_weather",
-          arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
-        },
-        {
-          type: "function_call_output" as const,
-          call_id: "call_1",
-          output: "{\"temp\":20,\"condition\":\"clear\"}",
-        },
-        { role: "user" as const, content: "Thanks. And now Madrid?" },
-      ],
-    };
+    return [
+      { role: "assistant" as const, content: "I'll call a tool to fetch weather." },
+      {
+        type: "function_call" as const,
+        call_id: "call_1",
+        name: "get_weather",
+        arguments: "{\"city\":\"Paris\",\"units\":\"celsius\"}",
+      },
+      {
+        type: "function_call_output" as const,
+        call_id: "call_1",
+        output: "{\"temp\":20,\"condition\":\"clear\"}",
+      },
+      { role: "user" as const, content: "Thanks. And now Madrid?" },
+    ];
   }
 
   if (provider === "anthropic") {
-    return {
-      messages: [
-        {
-          role: "assistant" as const,
-          content: [
-            { type: "text" as const, text: "I'll call a tool to fetch weather." },
-            {
-              type: "tool_use" as const,
-              id: "toolu_1",
-              name: "get_weather",
-              input: { city: "Paris", units: "celsius" },
-            },
-          ],
-        },
-        {
-          role: "user" as const,
-          content: [
-            {
-              type: "tool_result" as const,
-              tool_use_id: "toolu_1",
-              content: "{\"temp\":20,\"condition\":\"clear\"}",
-            },
-            { type: "text" as const, text: "Thanks. And now Madrid?" },
-          ],
-        },
-      ],
-    };
-  }
-
-  return {
-    contents: [
+    return [
       {
-        role: "model" as const,
-        parts: [
-          { text: "I'll call a tool to fetch weather." },
+        role: "assistant" as const,
+        content: [
+          { type: "text" as const, text: "I'll call a tool to fetch weather." },
           {
-            functionCall: {
-              id: "call_1",
-              name: "get_weather",
-              args: { city: "Paris", units: "celsius" },
-            },
+            type: "tool_use" as const,
+            id: "toolu_1",
+            name: "get_weather",
+            input: { city: "Paris", units: "celsius" },
           },
         ],
       },
       {
         role: "user" as const,
-        parts: [
+        content: [
           {
-            functionResponse: {
-              id: "call_1",
-              name: "get_weather",
-              response: { output: { temp: 20, condition: "clear" } },
-            },
+            type: "tool_result" as const,
+            tool_use_id: "toolu_1",
+            content: "{\"temp\":20,\"condition\":\"clear\"}",
           },
-          { text: "Thanks. And now Madrid?" },
+          { type: "text" as const, text: "Thanks. And now Madrid?" },
         ],
       },
-    ],
-  };
+    ];
+  }
+
+  return [
+    {
+      role: "model" as const,
+      parts: [
+        { text: "I'll call a tool to fetch weather." },
+        {
+          functionCall: {
+            id: "call_1",
+            name: "get_weather",
+            args: { city: "Paris", units: "celsius" },
+          },
+        },
+      ],
+    },
+    {
+      role: "user" as const,
+      parts: [
+        {
+          functionResponse: {
+            id: "call_1",
+            name: "get_weather",
+            response: { output: { temp: 20, condition: "clear" } },
+          },
+        },
+        { text: "Thanks. And now Madrid?" },
+      ],
+    },
+  ];
 }
 
 function getAISdkMessages(): ModelMessage[] {
@@ -180,33 +176,30 @@ function getAISdkMessages(): ModelMessage[] {
 async function runCase(
   provider: Provider,
   mode: "endpoint" | "local",
-  inputMode: "provider" | "ai_sdk",
+  contentKind: ContentKind,
   tools: "on" | "off",
 ): Promise<Row> {
   try {
-    const input =
-      inputMode === "provider"
-        ? getInput(provider)
-        : {
-            inputMode: "ai_sdk" as const,
-            aiSdkMessages: getAISdkMessages(),
-          };
+    const content =
+      contentKind === "native"
+        ? getNativeContent(provider)
+        : getAISdkMessages();
 
     const model =
-      inputMode === "provider" ? MODELS[provider] : AI_SDK_MODELS[provider];
+      contentKind === "native" ? MODELS[provider] : AI_SDK_MODELS[provider];
 
     const result = await countTokens({
       provider,
       model,
       mode,
       countAssistantTools: tools === "on",
-      ...input,
-    } as never);
+      content,
+    });
 
     return {
       provider,
       mode,
-      inputMode,
+      contentKind,
       tools,
       ok: true,
       tokens: result.tokens,
@@ -219,7 +212,7 @@ async function runCase(
     return {
       provider,
       mode,
-      inputMode,
+      contentKind,
       tools,
       ok: false,
       error: message,
@@ -232,49 +225,29 @@ async function main() {
   const providers: Provider[] = ["openai", "anthropic", "google"];
 
   for (const provider of providers) {
-    rows.push(await runCase(provider, "local", "provider", "on"));
-    rows.push(await runCase(provider, "local", "provider", "off"));
-    rows.push(await runCase(provider, "local", "ai_sdk", "on"));
-    rows.push(await runCase(provider, "local", "ai_sdk", "off"));
+    rows.push(await runCase(provider, "local", "native", "on"));
+    rows.push(await runCase(provider, "local", "native", "off"));
+    rows.push(await runCase(provider, "local", "messages", "on"));
+    rows.push(await runCase(provider, "local", "messages", "off"));
 
     if (hasKey(provider)) {
-      rows.push(await runCase(provider, "endpoint", "provider", "on"));
-      rows.push(await runCase(provider, "endpoint", "provider", "off"));
-      rows.push(await runCase(provider, "endpoint", "ai_sdk", "on"));
-      rows.push(await runCase(provider, "endpoint", "ai_sdk", "off"));
+      rows.push(await runCase(provider, "endpoint", "native", "on"));
+      rows.push(await runCase(provider, "endpoint", "native", "off"));
+      rows.push(await runCase(provider, "endpoint", "messages", "on"));
+      rows.push(await runCase(provider, "endpoint", "messages", "off"));
     } else {
-      rows.push({
-        provider,
-        mode: "endpoint",
-        inputMode: "provider",
-        tools: "on",
-        ok: false,
-        error: "missing API key",
-      });
-      rows.push({
-        provider,
-        mode: "endpoint",
-        inputMode: "provider",
-        tools: "off",
-        ok: false,
-        error: "missing API key",
-      });
-      rows.push({
-        provider,
-        mode: "endpoint",
-        inputMode: "ai_sdk",
-        tools: "on",
-        ok: false,
-        error: "missing API key",
-      });
-      rows.push({
-        provider,
-        mode: "endpoint",
-        inputMode: "ai_sdk",
-        tools: "off",
-        ok: false,
-        error: "missing API key",
-      });
+      for (const contentKind of ["native", "messages"] as const) {
+        for (const tools of ["on", "off"] as const) {
+          rows.push({
+            provider,
+            mode: "endpoint",
+            contentKind,
+            tools,
+            ok: false,
+            error: "missing API key",
+          });
+        }
+      }
     }
   }
 
@@ -285,4 +258,3 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
-

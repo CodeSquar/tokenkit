@@ -16,39 +16,35 @@ export type LocalStrategy =
   | "tiktoken"
   | "anthropic_tokenizer"
   | "heuristic";
-export type InputMode = "provider" | "text" | "ai_sdk";
+
+export type OpenAIContent = string | ResponseInput | ModelMessage[] | UIMessage[];
+
+export type AnthropicContent = string | MessageParam[] | ModelMessage[] | UIMessage[];
+
+export type GoogleContent = string | Content[] | ModelMessage[] | UIMessage[];
 
 interface BaseCountTokensOptions {
   model: string;
   mode?: CountMode;
-  inputMode?: InputMode;
   apiKey?: string;
   countAssistantTools?: boolean;
+  system?: string;
+  systemInstruction?: Content;
 }
 
 export interface OpenAICountTokensOptions extends BaseCountTokensOptions {
   provider: "openai";
-  input?: string | ResponseInput;
-  aiSdkMessages?: ModelMessage[];
-  uiMessages?: UIMessage[];
+  content: OpenAIContent;
 }
 
 export interface AnthropicCountTokensOptions extends BaseCountTokensOptions {
   provider: "anthropic";
-  input?: string;
-  messages?: MessageParam[];
-  aiSdkMessages?: ModelMessage[];
-  uiMessages?: UIMessage[];
-  system?: string;
+  content: AnthropicContent;
 }
 
 export interface GoogleCountTokensOptions extends BaseCountTokensOptions {
   provider: "google";
-  input?: string;
-  contents?: Content[];
-  aiSdkMessages?: ModelMessage[];
-  uiMessages?: UIMessage[];
-  systemInstruction?: Content;
+  content: GoogleContent;
 }
 
 export type CountTokensOptions =

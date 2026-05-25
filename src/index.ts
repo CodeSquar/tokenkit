@@ -6,9 +6,11 @@ export { countHeuristic } from "./local/strategies/heuristic.js";
 export type {
   Provider,
   CountMode,
-  InputMode,
   Method,
   LocalStrategy,
+  OpenAIContent,
+  AnthropicContent,
+  GoogleContent,
   OpenAICountTokensOptions,
   AnthropicCountTokensOptions,
   GoogleCountTokensOptions,

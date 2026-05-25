@@ -30,8 +30,7 @@ describe("google adapter", () => {
     const result = await countTokens({
       provider: "google",
       model: "gemini-2.0-flash",
-      inputMode: "text",
-      input: "Hello",
+      content: "Hello",
       mode: "endpoint",
       apiKey: "gemini-key",
     });
@@ -51,8 +50,7 @@ describe("google adapter", () => {
     await countTokens({
       provider: "google",
       model: "gemini-2.0-flash",
-      inputMode: "provider",
-      contents: [{ role: "user", parts: [{ text: "Hello" }] }],
+      content: [{ role: "user", parts: [{ text: "Hello" }] }],
       systemInstruction: { role: "system", parts: [{ text: "Be concise" }] },
       mode: "endpoint",
       apiKey: "gemini-key",

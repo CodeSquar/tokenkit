@@ -14,7 +14,7 @@ Uses the provider's official endpoint when available (`mode: "endpoint"` or `"au
 npm install tokens-usage
 ```
 
-If you pass `uiMessages` with `inputMode: "ai_sdk"`, install AI SDK as well:
+If you pass `UIMessage[]` as `content`, install AI SDK as well:
 
 ```bash
 npm install tokens-usage ai
@@ -28,8 +28,7 @@ import { countTokens, estimateTokens } from "tokens-usage";
 const result = await countTokens({
   provider: "openai",
   model: "gpt-5.5",
-  inputMode: "provider",
-  input: [
+  content: [
     { role: "user", content: "Hello" },
     {
       type: "function_call",
@@ -48,6 +47,16 @@ console.log(result.method);
 console.log(result.price);
 ```
 
+Plain text is the simplest form:
+
+```ts
+await countTokens({
+  provider: "openai",
+  model: "gpt-4o",
+  content: "Hello world",
+});
+```
+
 ### AI SDK (`ModelMessage` / `UIMessage`)
 
 ```ts
@@ -61,8 +70,7 @@ const modelMessages: ModelMessage[] = [
 await countTokens({
   provider: "openai",
   model: "gpt-4o",
-  inputMode: "ai_sdk",
-  aiSdkMessages: modelMessages,
+  content: modelMessages,
 });
 
 const uiMessages: UIMessage[] = [
@@ -76,13 +84,12 @@ const uiMessages: UIMessage[] = [
 await countTokens({
   provider: "google",
   model: "gemini-2.0-flash",
-  inputMode: "ai_sdk",
-  uiMessages,
+  content: uiMessages,
 });
 ```
 
 Notes:
-- `inputMode: "ai_sdk"` uses strict model validation per provider:
+- `ModelMessage[]` uses strict model validation per provider:
   - model must exist in tokens-usage catalog
   - model must be supported by AI SDK for that provider
 - `UIMessage[]` is converted internally with AI SDK `convertToModelMessages` (requires the `ai` peer dependency).
@@ -96,15 +103,13 @@ Notes:
 await countTokens({
   provider: "openai",
   model: "gpt-5.5",
-  inputMode: "text",
-  input: "Hello world",
+  content: "Hello world",
 });
 
 await countTokens({
   provider: "openai",
   model: "gpt-5.5",
-  inputMode: "provider",
-  input: [{ role: "user", content: "Hello world" }], // ResponseInput
+  content: [{ role: "user", content: "Hello world" }], // ResponseInput
 });
 ```
 
@@ -114,16 +119,14 @@ await countTokens({
 await countTokens({
   provider: "anthropic",
   model: "claude-sonnet-4-6",
-  inputMode: "text",
-  input: "Hello",
+  content: "Hello",
   system: "Be concise",
 });
 
 await countTokens({
   provider: "anthropic",
   model: "claude-sonnet-4-6",
-  inputMode: "provider",
-  messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+  content: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
   system: "Be concise",
 });
 ```
@@ -134,34 +137,57 @@ await countTokens({
 await countTokens({
   provider: "google",
   model: "gemini-3.5-flash",
-  inputMode: "text",
-  input: "Hello",
+  content: "Hello",
+  system: "Be concise",
 });
 
 await countTokens({
   provider: "google",
   model: "gemini-3.5-flash",
-  inputMode: "provider",
-  contents: [{ role: "user", parts: [{ text: "Hello" }] }],
+  content: [{ role: "user", parts: [{ text: "Hello" }] }],
 });
 ```
 
-## `inputMode`
+## `content` (auto-detected)
 
-Default: `provider`.
+Pass `content` as a string or array. tokens-usage infers the format automatically:
 
-- `provider`: expects native provider payload:
-  - OpenAI: `input` (`string | ResponseInput`)
-  - Anthropic: `messages`
-  - Google: `contents`
-- `text`: expects `input: string` and tokens-usage converts it internally to native provider payload.
-- `ai_sdk`: expects `aiSdkMessages: ModelMessage[]` or `uiMessages: UIMessage[]` and tokens-usage converts them to native provider payload.
+| Shape | Detected as |
+|---|---|
+| `string` | Plain text |
+| OpenAI `ResponseInput` (incl. `function_call` items) | OpenAI native |
+| Anthropic `MessageParam[]` | Anthropic native |
+| Google `Content[]` (`parts`) | Google native |
+| AI SDK `ModelMessage[]` (`content`, tool parts, `tool` role) | AI SDK messages |
+| AI SDK `UIMessage[]` (`parts` with typed items) | UI messages |
+
+Optional top-level fields:
+- `system?: string` — for plain text (Anthropic/Google) or Anthropic native payloads
+- `systemInstruction?: Content` — for Google native payloads
 
 Validation is fail-fast:
-- In `text` mode, `input` is required and must be non-empty.
-- In `provider` mode, `input` is rejected for Anthropic and Google.
-- In `ai_sdk` mode, model support is strict: the model must exist in tokens-usage catalog and be supported by AI SDK for that provider.
-- In `ai_sdk` mode (v1), non-text media parts are ignored for counting; text and tool parts are counted.
+- Plain text must be non-empty.
+- Arrays must include at least one item.
+- AI SDK messages require strict model support (catalog + AI SDK).
+- Non-text media parts are ignored for counting in AI SDK / UI paths (v1).
+
+## Migration 0.3 → 0.4
+
+In 0.4.0, `inputMode` was removed. Pass the payload directly as `content`:
+
+| 0.3.x | 0.4.0 |
+|---|---|
+| `{ inputMode: "text", input: "Hi" }` | `{ content: "Hi" }` |
+| `{ input: responseInput }` (OpenAI) | `{ content: responseInput }` |
+| `{ messages: [...] }` (Anthropic) | `{ content: [...] }` |
+| `{ contents: [...] }` (Google) | `{ content: [...] }` |
+| `{ inputMode: "ai_sdk", aiSdkMessages }` | `{ content: modelMessages }` |
+| `{ inputMode: "ai_sdk", uiMessages }` | `{ content: uiMessages }` |
+| `{ system: "..." }` (Anthropic text) | `{ content: "...", system: "..." }` |
+
+No `content.type` field is required — the library infers it from the shape.
+
+`estimateTokens` uses the same shape (without `mode`).
 
 ## `countAssistantTools`
 

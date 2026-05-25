@@ -9,7 +9,7 @@ describe("integration / OpenAI", () => {
     const result = await countTokens({
       provider: "openai",
       model: INTEGRATION_MODELS.openai,
-      input: "Hello",
+      content: "Hello",
       mode: "endpoint",
     });
 
@@ -24,7 +24,7 @@ describe("integration / Anthropic", () => {
     const result = await countTokens({
       provider: "anthropic",
       model: INTEGRATION_MODELS.anthropic,
-      messages: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
+      content: [{ role: "user", content: [{ type: "text", text: "Hello" }] }],
       mode: "endpoint",
     });
 
@@ -39,7 +39,7 @@ describe("integration / Google", () => {
     const result = await countTokens({
       provider: "google",
       model: INTEGRATION_MODELS.google,
-      contents: [{ role: "user", parts: [{ text: "Hello" }] }],
+      content: [{ role: "user", parts: [{ text: "Hello" }] }],
       mode: "endpoint",
     });
 
